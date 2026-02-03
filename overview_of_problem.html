@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dynamic Project States — Consolidated Dossier & Working Canvas</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#171a21;
+    --ink:#e6e8ef;
+    --muted:#9aa3b2;
+    --accent:#6ae3ff;
+    --accent-2:#7bffb7;
+    --accent-3:#ffd36a;
+    --danger:#ff6a6a;
+    --ok:#7bffb7;
+    --warn:#ffd36a;
+    --shadow: 0 0.4rem 1.4rem rgba(0,0,0,0.35);
+    --radius: 0.8rem;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background: radial-gradient(120vw 120vh at 10% -20%, #0e1014 0%, #0b0d11 50%, #0a0c10 100%);
+    color:var(--ink);
+    font: 15px/1.5 system-ui, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Noto Color Emoji, "Segoe UI Emoji", "Segoe UI Symbol";
+  }
+
+  header{
+    position: sticky; top:0; z-index:5;
+    backdrop-filter: saturate(130%) blur(8px);
+    background: rgba(10,12,16,0.7);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:1.2rem}
+  .title{
+    display:flex;gap:1rem;align-items:center;justify-content:space-between;
+  }
+  .title h1{font-size:1.2rem;margin:0;letter-spacing:.3px;color:#f0f2f9}
+  nav{
+    display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem
+  }
+  nav button{
+    appearance:none;border:1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, #191d26 0%, #141821 100%);
+    color:var(--ink);
+    padding:.55rem .8rem;border-radius:.6rem;cursor:pointer;
+    transition:.2s transform ease, .2s background ease;
+  }
+  nav button[aria-current="page"]{
+    background: linear-gradient(180deg, #1f2732 0%, #1a2230 100%);
+    border-color: rgba(106,227,255,0.35);
+    box-shadow: inset 0 0 0 1px rgba(106,227,255,0.25), var(--shadow);
+  }
+  nav button:active{transform: translateY(1px)}
+  .grid{
+    display:grid;gap:1rem;
+  }
+  @media(min-width:860px){
+    .grid.cols-2{grid-template-columns: 1.6fr 1fr;}
+    .grid.cols-3{grid-template-columns: 1fr 1fr 1fr;}
+  }
+  section.panel{
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, #151821 0%, #12151d 100%);
+    box-shadow: var(--shadow);
+    padding:1rem;
+  }
+  h2,h3{margin:.1rem 0 .6rem 0}
+  h2{font-size:1.1rem;color:#f1f4fb}
+  h3{font-size:1rem;color:#e7ebf7}
+  p{color:var(--ink);opacity:.95}
+  small, .muted{color:var(--muted)}
+  .kpi{
+    display:flex;gap:.8rem;flex-wrap:wrap;margin:.5rem 0 0 0
+  }
+  .kpi div{
+    background:#10131a;border:1px solid rgba(255,255,255,0.06);
+    padding:.5rem .7rem;border-radius:.5rem;color:#cfd5e6
+  }
+  .tag{display:inline-block;padding:.18rem .45rem;border-radius:.35rem;border:1px solid rgba(255,255,255,0.08);font-size:.8rem}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .danger{color:var(--danger)}
+
+  .min-h-64{min-height:16rem}
+  .row{display:flex;gap:.8rem;flex-wrap:wrap}
+  .row > *{flex:1 1 14rem}
+  label{display:block;margin:.4rem 0 .2rem 0;color:#dfe3f2}
+  input,select,textarea{
+    width:100%;background:#0f131b;border:1px solid rgba(255,255,255,0.08);
+    color:#e6e8ef;border-radius:.5rem;padding:.55rem .6rem;
+    outline:none
+  }
+  textarea{min-height:6rem;resize:vertical}
+  input[type="range"]{height:2.2rem}
+  .btn{
+    display:inline-flex;gap:.5rem;align-items:center;justify-content:center;cursor:pointer;
+    padding:.55rem .8rem;border-radius:.6rem;border:1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, #191d26 0%, #141821 100%); color:#e7edf8;
+  }
+  .btn.primary{
+    background: linear-gradient(180deg, #162430 0%, #13202b 100%);
+    border-color: rgba(123,255,183,0.35);
+    box-shadow: inset 0 0 0 1px rgba(123,255,183,0.25);
+  }
+  .btn.danger{
+    border-color: rgba(255,106,106,.25);
+    box-shadow: inset 0 0 0 1px rgba(255,106,106,.18);
+  }
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+  .flex{display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap}
+  .pill{
+    display:inline-flex;gap:.4rem;align-items:center;padding:.25rem .5rem;border-radius:999px;
+    border:1px solid rgba(255,255,255,0.08);background:#0e1218
+  }
+  .scroller{overflow:auto}
+  .canvas{
+    border:1px dashed rgba(255,255,255,0.12);
+    background: repeating-linear-gradient(transparent,transparent 28px, rgba(255,255,255,0.03) 28px, rgba(255,255,255,0.03) 56px);
+    border-radius:.6rem; min-height:14rem; position:relative
+  }
+  .legend{display:flex;gap:.6rem;flex-wrap:wrap}
+  .legend span{display:inline-flex;gap:.4rem;align-items:center}
+  .swatch{width:12px;height:12px;border-radius:3px;background:var(--accent)}
+  .swatch2{background:var(--accent-2)} .swatch3{background:var(--accent-3)} .swatch4{background:#f77}
+  .card{
+    border:1px solid rgba(255,255,255,0.07); border-radius:.6rem; padding:.8rem; background:#121620
+  }
+  .grid-cards{
+    display:grid; gap: .8rem;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  .footnote{color:#b8bfd3;font-size:.92rem}
+  .cite{display:inline-block;background:#0d1117;border:1px solid rgba(255,255,255,0.06);padding:.12rem .35rem;border-radius:.35rem}
+  .toc{display:flex;gap:.6rem;flex-wrap:wrap}
+  .toc a{color:#a8dfff;text-decoration:none;border-bottom:1px dashed rgba(168,223,255,.35)}
+  .toast{
+    position:fixed; right:1rem; bottom:1rem; z-index:9999; 
+    background: #121621; border:1px solid rgba(255,255,255,0.08); padding:.7rem .9rem; border-radius:.6rem;
+    box-shadow: var(--shadow); display:none; max-width:80vw
+  }
+  .muted a{ color:#a8dfff }
+  .hr{height:1px;background:linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);margin:1rem 0}
+  details{background:#10141c;border-radius:.5rem;border:1px solid rgba(255,255,255,0.06);padding:.6rem}
+  details summary{cursor:pointer}
+  code.inline{background:#0c1016;border:1px solid rgba(255,255,255,0.08);padding:.1rem .25rem;border-radius:.3rem}
+  footer{padding:2rem 0;color:#a8b0c2}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="title">
+      <h1>Dynamic Project States — Consolidated Dossier & Working Canvas</h1>
+      <div class="pill"><span class="ok">●</span> <span class="muted">canvas status</span> <strong id="statusLabel">booting…</strong></div>
+    </div>
+    <nav role="tablist" aria-label="Sections">
+      <button class="tab" data-target="ledger" aria-current="page">1) Conversation Ledger (11)</button>
+      <button class="tab" data-target="brick">2) Discrete Brickwork Toy</button>
+      <button class="tab" data-target="circle">3) Continuous Circle + Lens</button>
+      <button class="tab" data-target="blueprint">4) Blueprint / Sheaf</button>
+      <button class="tab" data-target="ops">5) Research Ops (Playbook)</button>
+      <button class="tab" data-target="export">6) Export / Save</button>
+      <button class="tab" data-target="citations">7) Citations</button>
+    </nav>
+  </div>
+</header>
+
+<main id="app" class="wrap min-h-64" role="main" aria-live="polite" data-timeout="3000">
+  <noscript>Interactive visualisation (enable JavaScript)</noscript>
+
+  <!-- 1) LEDGER -->
+  <section id="ledger" class="panel" data-section>
+    <h2>Conversation Ledger — Progress & Key Ideas (11)</h2>
+    <p class="muted">
+      This ledger reconstructs and consolidates the project’s core threads so we can continue
+      even if earlier chats are removed. Where exact wording was unavailable, I’ve preserved decisions,
+      definitions, and artefacts in a canonical form. You can edit/annotate each item — the page
+      will remember changes in your browser.
+    </p>
+    <div class="kpi">
+      <div>Scope: <span class="ok">Ends → Ways → Means</span></div>
+      <div>Core maths: <span class="tag">Sheaves</span> <span class="tag">Lenses</span> <span class="tag">Operads/SMCs</span> <span class="tag">Open systems</span></div>
+      <div>Demo tracks: <span class="tag">Discrete brickwork</span> <span class="tag">Circle+slot sensor</span></div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="grid-cards" id="ledgerCards"></div>
+    <p class="muted" style="margin-top:.8rem">Tip: Click a card’s “↺ Reset” to restore the default synthesis.</p>
+  </section>
+
+  <!-- 2) BRICKWORK -->
+  <section id="brick" class="panel" data-section hidden>
+    <h2>Discrete Brickwork Toy — Courses, Directions, Doping & Curing</h2>
+    <p>
+      The project-as-manifold view: each <em>course</em> (layer) is a coordinate; orientation (CW/CCW) and
+      curing state (cooldown) define tangent directions and constraints. Doping enriches the state by
+      modifying allowable transitions (cooldowns). We enumerate feasible trajectories (sections) through
+      the blueprint.
+    </p>
+    <div class="row">
+      <div>
+        <label>Number of courses (layers) <span class="muted">(N)</span></label>
+        <input type="number" id="bwN" min="1" max="16" value="6" />
+      </div>
+      <div>
+        <label>Base cooldown per course <span class="muted">(steps)</span></label>
+        <input type="number" id="bwBaseCool" min="0" max="5" value="1" />
+      </div>
+      <div>
+        <label>Max enumerated paths</label>
+        <input type="number" id="bwMaxPaths" min="1" max="4096" value="256" />
+      </div>
+      <div>
+        <label>Doping schedule (comma/space list of N ints, ≥0) <span class="muted">(adds to cooldown)</span></label>
+        <input type="text" id="bwDoping" value="0 1 0 2 1 0" />
+      </div>
+    </div>
+    <div class="row" style="margin-top:.6rem">
+      <div>
+        <button class="btn primary" id="bwRun">Run enumeration</button>
+        <button class="btn" id="bwDraw">Redraw cylinder</button>
+        <button class="btn danger" id="bwClear">Clear results</button>
+      </div>
+      <div class="legend">
+        <span><i class="swatch"></i> CW</span>
+        <span><i class="swatch2"></i> CCW</span>
+        <span><i class="swatch3"></i> curing</span>
+        <span><i class="swatch4"></i> forbidden</span>
+      </div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:.8rem">
+      <div class="card">
+        <h3>Feasible path sampler</h3>
+        <div id="bwPaths" class="scroller" style="max-height:18rem"></div>
+      </div>
+      <div class="card">
+        <h3>Cylinder sketch</h3>
+        <canvas id="bwCanvas" class="canvas" width="600" height="360" aria-label="cylinder"></canvas>
+      </div>
+    </div>
+    <details style="margin-top:.8rem">
+      <summary><strong>Transition rule (discrete dynamics)</strong></summary>
+      <div class="muted">
+        <p>State is <code class="inline">(k, dir, c)</code> with course index <code class="inline">k∈{0..N}</code>, current direction
+           <code class="inline">dir∈{+1(CW),-1(CCW)}</code>, cooldown <code class="inline">c≥0</code>. At start, <code class="inline">(0, ⌀, 0)</code>.</p>
+        <ul>
+          <li>If <code class="inline">c&gt;0</code>, only transition is curing: <code class="inline">(k, dir, c)→(k, dir, c-1)</code>.</li>
+          <li>If <code class="inline">c=0</code> and <code class="inline">k&lt;N</code>, choose <em>next</em> course direction <code class="inline">dir′∈{±1}</code> and set
+              <code class="inline">cool = base_cool + doping[k]</code>, then transition
+              <code class="inline">(k, dir, 0)→(k+1, dir′, cool)</code>.</li>
+          <li>Terminate when <code class="inline">k=N</code> and <code class="inline">c=0</code> (completed build).</li>
+        </ul>
+        <p>The constraints define a vector field over the discrete state space. Doping enriches the manifold by
+           changing the local “time-to-move” and thus the set of feasible sections through the blueprint.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3) CIRCLE + LENS -->
+  <section id="circle" class="panel" data-section hidden>
+    <h2>Continuous Circle System as a Lens — Slot Observation, Wiring Diagram & Numbers</h2>
+    <p>
+      We treat the moving point on a circle as an open system with parameters (radius <em>r</em>, angular
+      speed <em>ω</em>) and an <em>arc sensor</em> (center <em>φ<sub>c</sub></em>, half-width <em>α</em>) that exposes output only when the point
+      traverses the viewing slot. Below we formalize it as a lens (Myers-style), show a wiring diagram,
+      and run a simulation/analysis.
+    </p>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>Parameters & Simulation</h3>
+        <div class="row">
+          <div><label>Radius r</label><input id="cR" type="number" step="0.1" value="3.0"></div>
+          <div><label>Angular speed ω (rad/s)</label><input id="cW" type="number" step="0.1" value="1.2"></div>
+          <div><label>Initial angle θ₀ (rad)</label><input id="cT0" type="number" step="0.1" value="0.3"></div>
+        </div>
+        <div class="row">
+          <div><label>Arc center φ<sub>c</sub> (rad)</label><input id="cPhi" type="number" step="0.1" value="1.4"></div>
+          <div><label>Arc half-width α (rad, 0..π)</label><input id="cAlpha" type="number" step="0.01" value="0.5"></div>
+          <div><label>Horizon T (s)</label><input id="cT" type="number" step="0.1" value="12"></div>
+        </div>
+        <div class="row">
+          <div><label>Sample Δt (s)</label><input id="cDt" type="number" step="0.01" value="0.03"></div>
+          <div style="display:flex;align-items:flex-end;gap:.5rem">
+            <button class="btn primary" id="cRun">Compute windows</button>
+            <button class="btn" id="cAnim">Animate</button>
+            <button class="btn danger" id="cStop" disabled>Stop</button>
+          </div>
+        </div>
+        <div class="legend" style="margin-top:.5rem">
+          <span><i class="swatch"></i> point</span>
+          <span><i class="swatch2"></i> viewing arc</span>
+          <span><i class="swatch3"></i> visible track</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Canvas</h3>
+        <canvas id="cCanvas" class="canvas" width="560" height="360" aria-label="circle simulation"></canvas>
+      </div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:.8rem">
+      <div class="card">
+        <h3>Observation windows (analytic)</h3>
+        <div id="cWindows" class="scroller" style="max-height:18rem"></div>
+      </div>
+      <div class="card">
+        <h3>Sampled outputs</h3>
+        <div id="cSamples" class="scroller" style="max-height:18rem"></div>
+      </div>
+    </div>
+
+    <details style="margin-top:.8rem">
+      <summary><strong>Lens formalization (Myers); wiring diagram; Spivak correspondence</strong></summary>
+      <div class="muted">
+        <p><strong>Doctrine & spaces.</strong> Work in <span class="mono">Euc</span> (Euclidean spaces with smooth maps). An open continuous-time system in Myers’ sense
+          has state <span class="mono">S</span>, output <span class="mono">O</span>, input bundle <span class="mono">I</span> over <span class="mono">O</span>, readout <span class="mono">r:S→O</span>, and dynamics as an update map
+          <span class="mono">u : r*I → T S</span>. Such systems can be packaged as a generalized lens
+          <span class="mono">(u over r): (T S, S) → (I, O)</span>, and composed via lenses/wiring. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}</p>
+        <p><strong>Circle+slot system.</strong> Let the state space be the circle <span class="mono">S = S¹ ≅ ℝ/2πℤ</span> parameterized by an angle θ.
+          Parameters (inputs) include <span class="mono">ω</span> (angular speed), <span class="mono">r</span> (radius), and slot params <span class="mono">(φ_c, α)</span>.
+          Define readout <span class="mono">r(θ) = (vis(θ), θ)</span> where <span class="mono">vis(θ)=1</span> if the wrapped difference
+          <span class="mono">|wrap(θ - φ_c)| ≤ α</span>, else <span class="mono">0</span>; the exposed output thus carries a visibility bit and the current angle.
+          Define <span class="mono">I = ℝ×ℝ×S¹×[0,π]</span> for <span class="mono">(ω, r, φ_c, α)</span> and dynamics
+          <span class="mono">u((θ),(ω, r, φ_c, α)) = ω ∂/∂θ</span> (constant vector field on <span class="mono">S¹</span>).
+          Then an open system lens is
+          <span class="mono">(u over r): (T S¹, S¹) → (I, O)</span>, with <span class="mono">O = {0,1}×S¹</span>. :contentReference[oaicite:2]{index=2}</p>
+        <p><strong>Arena-to-arena (lens) mapping.</strong> In Myers’ notation, a lens <span class="mono">(f♯, f):(A⁻,A⁺) ⇆ (B⁻,B⁺)</span> is “backward on inputs, forward on outputs”.
+          Here: <span class="mono">A=(T S¹, S¹)</span>, <span class="mono">B=(I,O)</span>; composition with parameter sources and sensor post-processing
+          follows lens composition / wiring. The continuous-time view is compatible with Spivak’s lens generalizations
+          (bundles viewpoint) that include dynamical systems as lenses. :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}</p>
+        <p><strong>Wiring diagram (operadic view).</strong> Using wiring/operad composition (acyclic wiring operad):
+        <pre class="mono" aria-label="wiring diagram">
+[ Params ]───┐
+             v
+         (u over r): (T S¹,S¹) ──▶ (I,O) ──▶ [ Arc-Postprocess ] ──▶ Outputs
+                 ^            (lens)          (e.g., retain only visible samples)
+                 │
+         [ Initial State θ₀ ]
+        </pre>
+        Lenses as components wired by an operad faithfully capture composition without privileging
+        sequence/parallel — matching the Coecke–Selby et al. operadic perspective on process theories. :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6} :contentReference[oaicite:7]{index=7}</p>
+        <p><strong>Undirected wiring & alternative formalisms.</strong> When directionality is abstracted, undirected wiring
+          diagrams (as cospan operads) and Dirac-relations provide alternative compositional accounts for physical
+          interconnection; they nest by erasing boxes upon composition. :contentReference[oaicite:8]{index=8} :contentReference[oaicite:9]{index=9} :contentReference[oaicite:10]{index=10}</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 4) BLUEPRINT / SHEAF -->
+  <section id="blueprint" class="panel" data-section hidden>
+    <h2>Blueprint-as-Sheaf / State Manifold — Sections as Feasible Project Paths</h2>
+    <p>
+      Treat the evolving blueprint as a base category of “cells” (e.g., courses × positions). A sheaf
+      assigns local states to each cell with restriction maps along overlaps; global sections correspond
+      to consistent project completions. The toy models here provide concrete finite sheaves: the
+      brickwork sheaf (discrete) and circle-observer sheaf (continuous exposure). Use this pad to
+      sketch your current “global section” hypothesis and log constraints.
+    </p>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>Sheaf notes (lightweight)</h3>
+        <textarea id="sheafNotes" placeholder="Sketch the base category (cells) and the restriction maps. E.g., each course restricts to its segments; curing states restrict to a ‘next-permitted’ predicate…"></textarea>
+        <div style="margin-top:.6rem">
+          <button class="btn primary" id="saveSheaf">Save notes</button>
+          <button class="btn" id="resetSheaf">Reset</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>“Section” checklist</h3>
+        <div class="grid-cards" id="sectionChecks"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5) OPS -->
+  <section id="ops" class="panel" data-section hidden>
+    <h2>Research Ops — Program Framing, Risks & Kill Criteria (Playbook-aligned)</h2>
+    <p class="muted">
+      Using the Research Leaders’ Playbook framing, keep the program crisp — ambitious goal, risks,
+      kill criteria, stakeholders, transitions. :contentReference[oaicite:11]{index=11}
+    </p>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>Program one-pager</h3>
+        <label>Vision blurb (2 sentences)</label>
+        <textarea id="opsVision">A dynamic-state blueprint for projects using lenses/sheaves; validated on (i) discrete brickwork and (ii) continuous circle+slot, then generalized to real project scheduling with constraints as operadic wiring.</textarea>
+        <label>Ambitious goal (5-year reachable)</label>
+        <textarea id="opsGoal">Deliver an open-source canvas/toolkit where project states are composed operadically, with a lens-based I/O interface, producing explainable trajectories and kill-criteria-driven execution — demonstrated on at least one real build pipeline.</textarea>
+        <label>Who will care (transition)</label>
+        <textarea id="opsCare">Construction ops, manufacturing scheduling, and research program managers who need compositional, explainable plans with constraints. Transition path: OSS library + exemplar deployments.</textarea>
+      </div>
+      <div class="card">
+        <h3>Risks & kill criteria</h3>
+        <label>Top risks</label>
+        <textarea id="opsRisks">R1: Formalism too abstract for practitioners. R2: Constraint explosion in real projects. R3: Visualization UX.</textarea>
+        <label>Mitigations & “fast clever experiments”</label>
+        <textarea id="opsMits">M1: User parity: keep toy→real via small pilots. M2: Prune via partial evaluation and operadic factoring. M3: Usability tests with practitioners.</textarea>
+        <label>Kill criteria (cruxes)</label>
+        <textarea id="opsKill">K1: If pilots cannot beat a baseline heuristic by 10% schedule adherence in 6 months. K2: If explainability scores below 70% in UX evals.</textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6) EXPORT -->
+  <section id="export" class="panel" data-section hidden>
+    <h2>Export / Save</h2>
+    <p>Everything you edit is autosaved locally. Use these to export/import.</p>
+    <div class="row">
+      <div class="card">
+        <h3>Download current state (JSON)</h3>
+        <button class="btn primary" id="btnExport">Export JSON</button>
+        <div id="exportInfo" class="muted" style="margin-top:.5rem"></div>
+      </div>
+      <div class="card">
+        <h3>Import from JSON</h3>
+        <input type="file" id="fileImport" accept="application/json" />
+      </div>
+      <div class="card">
+        <h3>Reset all</h3>
+        <button class="btn danger" id="btnResetAll">Clear local data</button>
+        <p class="muted">This removes customised notes and ledger edits.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7) CITATIONS -->
+  <section id="citations" class="panel" data-section hidden>
+    <h2>References & Citations</h2>
+    <p class="footnote">
+      <strong>Core lenses & open systems.</strong> Spivak’s lenses (get/put; bundles view; dynamical systems as lenses) and
+      Myers’ open systems/double categories underwrite the formal “arena↔arena” mappings and wiring we use here.
+      :contentReference[oaicite:12]{index=12} :contentReference[oaicite:13]{index=13} :contentReference[oaicite:14]{index=14} :contentReference[oaicite:15]{index=15} :contentReference[oaicite:16]{index=16}
+      :contentReference[oaicite:17]{index=17} :contentReference[oaicite:18]{index=18} :contentReference[oaicite:19]{index=19} :contentReference[oaicite:20]{index=20}
+    </p>
+    <p class="footnote">
+      <strong>Operads & wiring.</strong> Process theories as operad algebras (acyclic wiring operad), time-neutrality,
+      and decompositions of wiring operations motivate our wiring-diagram composition and the “no privileged sequence” stance.
+      :contentReference[oaicite:21]{index=21} :contentReference[oaicite:22]{index=22} :contentReference[oaicite:23]{index=23} :contentReference[oaicite:24]{index=24} :contentReference[oaicite:25]{index=25}
+    </p>
+    <p class="footnote">
+      <strong>Undirected wiring (cospan operad) & Dirac-relations.</strong> For domain-agnostic composition, undirected wiring
+      diagrams and DiracRel operads provide useful alternatives. :contentReference[oaicite:26]{index=26} :contentReference[oaicite:27]{index=27} :contentReference[oaicite:28]{index=28} :contentReference[oaicite:29]{index=29} :contentReference[oaicite:30]{index=30}
+    </p>
+    <p class="footnote">
+      <strong>Canvas spec & UX constraints for this file.</strong> Single-file, inline assets, smoke test, graceful fallback. :contentReference[oaicite:31]{index=31}
+    </p>
+    <p class="footnote">
+      <strong>Program leadership.</strong> Framing of risks, kill criteria, and transition follows the Research Leaders’ Playbook. :contentReference[oaicite:32]{index=32}
+    </p>
+    <p class="footnote">
+      <strong>Context note.</strong> Background comparatives on Coecke’s Generalised Process Theories and broader categorical landscape. :contentReference[oaicite:33]{index=33} :contentReference[oaicite:34]{index=34}
+    </p>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  // --- boot wrapper & fallback --- //
+  const app = document.getElementById('app');
+  const toast = (msg, kind='info')=>{
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.display='block';
+    el.style.borderColor = kind==='error' ? 'rgba(255,106,106,.5)' :
+                           kind==='warn' ? 'rgba(255,211,106,.5)' :
+                           'rgba(123,255,183,.5)';
+    setTimeout(()=>{ el.style.display='none'; }, 2500);
+  };
+  const fallback = (e)=>{
+    console.error('Fallback due to:', e);
+    window.__canvasStatus = 'fallback';
+    document.getElementById('statusLabel').textContent = 'fallback';
+    toast(typeof e==='string'? e : 'Interactive features degraded.', 'warn');
+    // degrade visuals if needed – here we keep static content visible.
+  };
+  window.__canvasStatus = 'booting';
+
+  try{
+    // ----------- TABS ----------- //
+    const tabs = Array.from(document.querySelectorAll('nav .tab'));
+    const sections = Array.from(document.querySelectorAll('[data-section]'));
+    const show = id=>{
+      sections.forEach(s=> s.hidden = s.id!==id );
+      tabs.forEach(b=> b.setAttribute('aria-current', b.dataset.target===id ? 'page' : 'false'));
+      location.hash = id;
+    };
+    tabs.forEach(b=> b.addEventListener('click', ()=> show(b.dataset.target)));
+    if(location.hash){
+      const id = location.hash.replace('#','');
+      if(document.getElementById(id)) show(id);
+    }
+
+    // ---------- LEDGER (11 items) ---------- //
+    const defaultLedger = [
+      {
+        title:"1) Programme framing — Ends, Ways, Means",
+        decided:[
+          "Ends: a general method to represent projects as state manifolds; transitions as vector fields; feasible executions as sections.",
+          "Ways: use sheaves (blueprint as base), lenses (I/O, open systems), and operadic wiring for composition.",
+          "Means: interactive single-file HTML canvas (this file), with two toy exemplars."
+        ],
+        key:[
+          "Spaces: X (manifold of project states), tangent bundle TX, vector field v: X→TX.",
+          "Closed system: (X, v). Open system: lens-driven with inputs/outputs.",
+          "Two exemplars: (i) discrete brickwork, (ii) continuous circle-with-slot."
+        ],
+        artefacts:["This consolidated canvas; slots for sheaf notes; ops playbook board."],
+        open:["Pick 1–2 real workflows to pilot; define measurable baselines."],
+      },
+      {
+        title:"2) Discrete brickwork toy — courses & direction",
+        decided:[
+          "Each course can be laid CW or CCW; curing imposes waiting states.",
+          "State triples (k,dir,cooldown); trajectories enumerate valid builds."
+        ],
+        key:[
+          "Doping lifts to state, adjusting cooldowns (local nonlinearity).",
+          "Feasible paths ↔ sections over a finite sheaf of constraints."
+        ],
+        artefacts:["Enumerator + cylinder sketch (see tab 2)."],
+        open:["Empirically tune doping→cooldown maps; add spatial segments per course."]
+      },
+      {
+        title:"3) Constraint enrichment — doping & curing",
+        decided:[
+          "Doping levels (per course) change cooldown before next placement.",
+          "Curing introduces ‘in-progress’ nodes, forcing temporal gaps."
+        ],
+        key:[
+          "Richer manifold: points encode layer config + residual cooldown.",
+          "Vector field gains piecewise structure; path counts vary sharply."
+        ],
+        artefacts:["Doping schedule input; path sampler."],
+        open:["Model resource contention (crew/equipment) as additional bundles."]
+      },
+      {
+        title:"4) Blueprint as sheaf; sections as executions",
+        decided:[
+          "Blueprint cells (courses×segments) form a base; state assignments must respect restrictions.",
+          "Global sections = complete, feasible builds consistent with constraints."
+        ],
+        key:[
+          "Local→global coherence captures ‘no surprises’ integration.",
+          "Supports explainable validation of schedules."
+        ],
+        artefacts:["Sheaf notes pad & ‘section’ checklist (tab 4)."],
+        open:["Specify concrete restriction maps; integrate progress telemetry."]
+      },
+      {
+        title:"5) Operads & wiring diagrams for composition",
+        decided:[
+          "Use operads (acyclic wiring) to compose subsystems without privileging sequence/parallel.",
+          "Time-neutral/higher-order processes can be folded in later."
+        ],
+        key:[
+          "Equivalence: SMCs ↔ algebras of a wiring operad (Patterson; Coecke et al.).",
+          "Lets us cleanly wire lenses without ad-hoc foliation."
+        ],
+        artefacts:["Wiring in the lens section; design note under Citations."],
+        open:["Introduce undirected wiring/DiracRel view for physical networks."]
+      },
+      {
+        title:"6) Lens formalism — Spivak & Myers alignment",
+        decided:[
+          "Adopt Myers-style for open systems ((u over r) lens).",
+          "Keep Spivak’s bundles view in mind for generalization."
+        ],
+        key:[
+          "Lens (f♯, f):(A⁻,A⁺)⇆(B⁻,B⁺); bi-directional information flow.",
+          "Open dynamical system packaged as a lens; ready for wiring."
+        ],
+        artefacts:["Formal statement + diagram & sim (tab 3)."],
+        open:["Extend to stochastic (monadic doctrine) and discrete automata."]
+      },
+      {
+        title:"7) Continuous exemplar — circle with viewing slot",
+        decided:[
+          "Inputs: (ω, r, φ_c, α), initial θ₀. Output: observation only on arc.",
+          "Compute exact visible windows; animate and sample outputs."
+        ],
+        key:[
+          "Update u: constant vector field ω ∂/∂θ on S¹.",
+          "Readout r(θ): (visible?, θ) using wrapped difference test."
+        ],
+        artefacts:["Analytic window solver; canvas animation (tab 3)."],
+        open:["Lens-composed cascades: multi-slot, noise, control input u(t)."]
+      },
+      {
+        title:"8) Analytics & explainability",
+        decided:[
+          "Prefer closed-form intervals (visibility windows) where possible.",
+          "Expose constraints and paths explicitly for audit."
+        ],
+        key:[
+          "Undirected wiring diagrams offer neutral composition view.",
+          "Dirac-relations depict energy-like constraints for physical analogues."
+        ],
+        artefacts:["Windows list; sampled outputs; wiring sketch."],
+        open:["Add proofs of feasibility certificates per path/section."]
+      },
+      {
+        title:"9) UX & single-file canvas",
+        decided:[
+          "Follow single-file, inline-asset, robust boot constraints.",
+          "Graceful fallback & smoke watchdog integrated."
+        ],
+        key:[
+          "No CDNs; Reserve space; data-smoke watchdog; toasts.",
+          "Local autosave for all editorial areas."
+        ],
+        artefacts:["This file (meets canvas spec)."],
+        open:["Add export-to-image for diagrams; improve accessibility narration."]
+      },
+      {
+        title:"10) Program ops — risks, kill criteria, transition",
+        decided:[
+          "Target 10× improvement bar; explicit kill criteria.",
+          "Plan for transition: OSS + pilots + docs."
+        ],
+        key:[
+          "Bias to action; fast clever experiments for cruxes.",
+          "Stakeholder mapping from day one."
+        ],
+        artefacts:["Ops board (tab 5)."],
+        open:["Pick first two pilot partners; write success metrics doc."]
+      },
+      {
+        title:"11) Roadmap & next experiments",
+        decided:[
+          "Scale discrete model to segments/resources; add real data.",
+          "Compose two lenses (plant + sensor) and evaluate in-the-loop control."
+        ],
+        key:[
+          "Demonstrate operadic composition across both exemplars.",
+          "Publish minimal spec + demo repo for early adopters."
+        ],
+        artefacts:["Export JSON of this canvas; shareable one-pager."],
+        open:["Schedule weekly build; gather pilot requirements."]
+      }
+    ];
+    const ledgerEl = document.getElementById('ledgerCards');
+    const LS_KEY = 'dps-ledger-v1';
+
+    const loadLedger = ()=>{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return defaultLedger;
+      try{ const obj = JSON.parse(raw); return Array.isArray(obj)? obj : defaultLedger; }
+      catch(e){ return defaultLedger; }
+    };
+    const saveLedger = (data)=> localStorage.setItem(LS_KEY, JSON.stringify(data));
+
+    let ledger = loadLedger();
+    const renderLedger = ()=>{
+      ledgerEl.innerHTML = '';
+      ledger.forEach((item, idx)=>{
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${item.title}</h3>
+          <div class="row">
+            <div>
+              <label>What we decided</label>
+              <textarea data-path="decided" data-idx="${idx}">${(item.decided||[]).map(x=>`• ${x}`).join('\n')}</textarea>
+            </div>
+            <div>
+              <label>Key ideas/definitions</label>
+              <textarea data-path="key" data-idx="${idx}">${(item.key||[]).map(x=>`• ${x}`).join('\n')}</textarea>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Artefacts / links</label>
+              <textarea data-path="artefacts" data-idx="${idx}">${(item.artefacts||[]).map(x=>`• ${x}`).join('\n')}</textarea>
+            </div>
+            <div>
+              <label>Open questions / next</label>
+              <textarea data-path="open" data-idx="${idx}">${(item.open||[]).map(x=>`• ${x}`).join('\n')}</textarea>
+            </div>
+          </div>
+          <div style="margin-top:.5rem;display:flex;gap:.5rem">
+            <button class="btn" data-reset="${idx}">↺ Reset</button>
+            <span class="muted">Autosaves on change</span>
+          </div>
+        `;
+        ledgerEl.appendChild(card);
+      });
+      ledgerEl.querySelectorAll('textarea').forEach(t=>{
+        t.addEventListener('change', ()=>{
+          const path = t.dataset.path, idx = +t.dataset.idx;
+          const lines = t.value.split('\n').map(s=>s.replace(/^•\s?/,'').trim()).filter(Boolean);
+          ledger[idx][path] = lines;
+          saveLedger(ledger);
+          toast('Saved.');
+        });
+      });
+      ledgerEl.querySelectorAll('[data-reset]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const i = +btn.dataset.reset;
+          ledger[i] = JSON.parse(JSON.stringify(defaultLedger[i]));
+          saveLedger(ledger); renderLedger(); toast('Card reset.');
+        });
+      });
+    };
+    renderLedger();
+
+    // ---------- BRICKWORK ---------- //
+    const bw = {
+      N: document.getElementById('bwN'),
+      base: document.getElementById('bwBaseCool'),
+      doping: document.getElementById('bwDoping'),
+      max: document.getElementById('bwMaxPaths'),
+      run: document.getElementById('bwRun'),
+      drawBtn: document.getElementById('bwDraw'),
+      clear: document.getElementById('bwClear'),
+      list: document.getElementById('bwPaths'),
+      canvas: document.getElementById('bwCanvas')
+    };
+
+    const parseDoping = (N, str)=>{
+      const tokens = str.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean).map(Number);
+      const out = new Array(N).fill(0);
+      for(let i=0;i<Math.min(N, tokens.length);i++){
+        out[i] = Math.max(0, Number.isFinite(tokens[i])? Math.floor(tokens[i]) : 0);
+      }
+      return out;
+    };
+
+    function enumeratePaths(N, base, dopes, maxPaths=256){
+      const paths = [];
+      const stack = [{k:0, dir:null, cool:0, seq:[]}];
+      while(stack.length){
+        const s = stack.pop();
+        if(paths.length >= maxPaths) break;
+        if(s.k===N && s.cool===0){
+          paths.push(s.seq.slice());
+          continue;
+        }
+        if(s.cool>0){
+          stack.push({k:s.k, dir:s.dir, cool:s.cool-1, seq: s.seq.concat([['curing', s.cool-1]])});
+          continue;
+        }
+        if(s.k<N){
+          for(const d of [+1, -1]){
+            const cool = base + (dopes[s.k]||0);
+            const step = d===+1 ? 'CW' : 'CCW';
+            stack.push({k:s.k+1, dir:d, cool, seq: s.seq.concat([[step, cool]])});
+          }
+        }
+      }
+      return paths;
+    }
+
+    function drawCylinder(N, pathsOne){
+      const ctx = bw.canvas.getContext('2d');
+      const W = bw.canvas.width, H = bw.canvas.height;
+      ctx.clearRect(0,0,W,H);
+      // background
+      ctx.fillStyle = '#0c0f14';
+      ctx.fillRect(0,0,W,H);
+      // draw courses as rings
+      const cx = W*0.5, cy = H*0.5;
+      const R0 = Math.min(W,H)*0.35;
+      const dr = (R0*0.9)/Math.max(1,N);
+      const ring = (i)=> R0 - i*dr;
+      ctx.lineWidth = 2;
+
+      for(let k=0;k<N;k++){
+        const R = ring(k);
+        // ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, Math.PI*2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.stroke();
+
+        // direction: if a sample path exists, depict it; else alternate
+        let dir = null;
+        if(pathsOne && pathsOne[k]){
+          const step = pathsOne[k][0];
+          dir = step==='CW' ? +1 : step==='CCW' ? -1 : null;
+        }else{
+          dir = (k%2===0)? +1 : -1;
+        }
+        if(dir){
+          // draw small arrows around ring to suggest orientation
+          const arrows = 12;
+          for(let j=0;j<arrows;j++){
+            const a = (j/arrows)*Math.PI*2;
+            const x = cx + (R)*Math.cos(a), y = cy + (R)*Math.sin(a);
+            const t = a + (dir>0? 0.6 : -0.6);
+            const x2 = cx + (R-8)*Math.cos(a), y2 = cy + (R-8)*Math.sin(a);
+            const x3 = cx + (R-8)*Math.cos(t), y3 = cy + (R-8)*Math.sin(t);
+            ctx.strokeStyle = dir>0? '#6ae3ff' : '#7bffb7';
+            ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x,y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x3,y3); ctx.stroke();
+          }
+        }
+      }
+    }
+
+    bw.run.addEventListener('click', ()=>{
+      const N = Math.max(1, Math.min(16, +bw.N.value||6));
+      const base = Math.max(0, +bw.base.value||0);
+      const dopes = parseDoping(N, bw.doping.value);
+      const max = Math.max(1, Math.min(4096, +bw.max.value||256));
+      const paths = enumeratePaths(N, base, dopes, max);
+      bw.list.innerHTML = '';
+      const info = document.createElement('div');
+      info.className = 'muted';
+      info.textContent = `Enumerated ${paths.length} path(s) (showing up to ${max}).`;
+      bw.list.appendChild(info);
+      paths.slice(0, max).forEach((p, i)=>{
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `<div class="muted">Path #${i+1}</div><div class="mono">${p.map(step=> step[0]==='curing' ? `~(${step[1]})` : (step[0]==='CW'?'→':'←')+`[${step[1]}]`).join(' ')}</div>`;
+        bw.list.appendChild(div);
+      });
+      drawCylinder(N, paths[0]||null);
+      toast('Brickwork enumeration done.');
+    });
+    bw.drawBtn.addEventListener('click', ()=>{
+      const N = Math.max(1, Math.min(16, +bw.N.value||6));
+      drawCylinder(N, null);
+    });
+    bw.clear.addEventListener('click', ()=>{
+      bw.list.innerHTML = '';
+      drawCylinder(0, null);
+    });
+    drawCylinder(6, null);
+
+    // ---------- CIRCLE + LENS ---------- //
+    const C = {
+      R: document.getElementById('cR'),
+      W: document.getElementById('cW'),
+      T0: document.getElementById('cT0'),
+      Phi: document.getElementById('cPhi'),
+      Alpha: document.getElementById('cAlpha'),
+      T: document.getElementById('cT'),
+      Dt: document.getElementById('cDt'),
+      Run: document.getElementById('cRun'),
+      Anim: document.getElementById('cAnim'),
+      Stop: document.getElementById('cStop'),
+      Canvas: document.getElementById('cCanvas'),
+      Win: document.getElementById('cWindows'),
+      Samp: document.getElementById('cSamples')
+    };
+    const ctxC = C.Canvas.getContext('2d');
+
+    const wrapPi = (x)=>{
+      // wrap to (-π, π]
+      let y = x % (2*Math.PI);
+      if(y<=-Math.PI) y += 2*Math.PI;
+      if(y>Math.PI) y -= 2*Math.PI;
+      return y;
+    };
+    function computeWindows(theta0, omega, phi, alpha, T){
+      // solve δ(t) = θ0 + ωt - φ; visible when |wrap(δ)| ≤ α
+      // find entry/exit times from lines δ0 + ω t = ± α + 2π n
+      const δ0 = wrapPi(theta0 - phi);
+      const sgn = Math.sign(omega)||1;
+      const nMin = Math.floor((omega>0? (omega*0 + (-Math.PI - δ0)) : (omega*0 + (α + δ0))) / (2*Math.PI)); // rough; we will just scan a range
+      const out=[];
+      const absw = Math.abs(omega);
+      const period = 2*Math.PI/absw;
+      const maxN = Math.ceil(T/period) + 3;
+      // generate many crossings
+      const cand = [];
+      for(let n=-maxN; n<=maxN; n++){
+        const tL = ( -δ0 - alpha + 2*Math.PI*n ) / omega;
+        const tR = ( -δ0 + alpha + 2*Math.PI*n ) / omega;
+        cand.push({t:tL, kind:'L'});
+        cand.push({t:tR, kind:'R'});
+      }
+      // keep within [0,T], sort
+      const events = cand.filter(e=> e.t>=0 && e.t<=T && Number.isFinite(e.t)).sort((a,b)=> a.t-b.t);
+      // Pair them depending on sign of ω
+      for(let i=0;i<events.length-1;i++){
+        const a = events[i], b = events[i+1];
+        if(omega>0 && a.kind==='L' && b.kind==='R'){
+          out.push({t0:a.t, t1:b.t});
+        }else if(omega<0 && a.kind==='R' && b.kind==='L'){
+          out.push({t0:a.t, t1:b.t});
+        }
+      }
+      return out;
+    }
+
+    function drawCircle(r, phi, alpha, pointAngle=null, visibleArcSamples=null){
+      const W = C.Canvas.width, H = C.Canvas.height;
+      const cx = W*0.5, cy = H*0.5;
+      const scale = Math.min(W,H)*0.23;
+      const R = scale * r;
+
+      ctxC.clearRect(0,0,W,H);
+      // axes
+      ctxC.fillStyle = '#0c0f14'; ctxC.fillRect(0,0,W,H);
+      // circle
+      ctxC.lineWidth = 2;
+      ctxC.beginPath(); ctxC.arc(cx, cy, R, 0, Math.PI*2);
+      ctxC.strokeStyle = 'rgba(255,255,255,0.15)'; ctxC.stroke();
+
+      // arc (viewing slot)
+      ctxC.beginPath();
+      ctxC.arc(cx, cy, R, phi-alpha, phi+alpha);
+      ctxC.strokeStyle = '#7bffb7'; ctxC.lineWidth = 6; ctxC.stroke();
+      ctxC.lineWidth = 2;
+
+      // draw visible track samples (if any)
+      if(visibleArcSamples && visibleArcSamples.length){
+        ctxC.strokeStyle = '#ffd36a';
+        ctxC.lineWidth = 3;
+        ctxC.beginPath();
+        visibleArcSamples.forEach((th,i)=>{
+          const x = cx + R*Math.cos(th), y = cy + R*Math.sin(th);
+          if(i===0) ctxC.moveTo(x,y); else ctxC.lineTo(x,y);
+        });
+        ctxC.stroke();
+        ctxC.lineWidth = 2;
+      }
+
+      // point
+      if(pointAngle!==null){
+        const x = cx + R*Math.cos(pointAngle);
+        const y = cy + R*Math.sin(pointAngle);
+        ctxC.fillStyle = '#6ae3ff';
+        ctxC.beginPath(); ctxC.arc(x,y,6,0,Math.PI*2); ctxC.fill();
+      }
+    }
+
+    function runCircleAnalysis(){
+      const r = +C.R.value||3, w = +C.W.value||1, t0 = +C.T0.value||0, phi = +C.Phi.value||0, a = Math.max(0, Math.min(Math.PI, +C.Alpha.value||0.5));
+      const T = Math.max(0, +C.T.value||10), dt = Math.max(0.005, +C.Dt.value||0.03);
+
+      const windows = computeWindows(t0, w, phi, a, T);
+      C.Win.innerHTML = '';
+      if(!windows.length){
+        C.Win.innerHTML = `<div class="muted">No visibility within T=${T}s.</div>`;
+      }else{
+        windows.forEach((win,i)=>{
+          const dur = (win.t1 - win.t0);
+          const p = document.createElement('div');
+          p.className = 'card mono';
+          p.textContent = `#${i+1}  [${win.t0.toFixed(3)} , ${win.t1.toFixed(3)}]   Δ=${dur.toFixed(3)} s`;
+          C.Win.appendChild(p);
+        });
+      }
+
+      // Sampled outputs
+      const samples = [];
+      let t=0;
+      while(t<=T+1e-9){
+        const theta = t0 + w*t;
+        const vis = Math.abs(wrapPi(theta - phi)) <= a ? 1 : 0;
+        if(vis) samples.push({t, theta});
+        t += dt;
+      }
+      C.Samp.innerHTML = '';
+      if(!samples.length){
+        C.Samp.innerHTML = `<div class="muted">No samples in-view.</div>`;
+      }else{
+        samples.slice(0,300).forEach(s=>{
+          const e = document.createElement('div');
+          e.className='mono';
+          e.textContent = `t=${s.t.toFixed(3)}  θ=${wrapPi(s.theta).toFixed(3)}  (visible)`;
+          C.Samp.appendChild(e);
+        });
+      }
+
+      // draw (show arc track as sampled line)
+      drawCircle(r, phi, a, null, samples.map(s=> wrapPi(s.theta)));
+      toast('Computed visibility windows.');
+    }
+
+    let animH = null, tAnim0=0;
+    function animateCircle(){
+      if(animH) return;
+      const r = +C.R.value||3, w = +C.W.value||1, t0 = +C.T0.value||0, phi = +C.Phi.value||0, a = Math.max(0, Math.min(Math.PI, +C.Alpha.value||0.5));
+      const T = Math.max(0, +C.T.value||10);
+      tAnim0 = performance.now();
+      C.Stop.disabled = false;
+
+      const step = (now)=>{
+        const t = (now - tAnim0)/1000;
+        if(t>T){ cancelAnimationFrame(animH); animH=null; C.Stop.disabled=true; return; }
+        const theta = t0 + w*t;
+        const vis = Math.abs(wrapPi(theta - phi)) <= a;
+        drawCircle(r, phi, a, wrapPi(theta), vis ? [wrapPi(theta)] : null);
+        animH = requestAnimationFrame(step);
+      };
+      animH = requestAnimationFrame(step);
+    }
+    C.Run.addEventListener('click', runCircleAnalysis);
+    C.Anim.addEventListener('click', animateCircle);
+    C.Stop.addEventListener('click', ()=>{ if(animH){ cancelAnimationFrame(animH); animH=null; C.Stop.disabled=true; }});
+    drawCircle(3, 1.4, 0.5, 0.3, null);
+
+    // ---------- BLUEPRINT / SHEAF ---------- //
+    const sheafKey = 'dps-sheaf-notes-v1';
+    const sheafNotes = document.getElementById('sheafNotes');
+    const saveSheaf = document.getElementById('saveSheaf');
+    const resetSheaf = document.getElementById('resetSheaf');
+    const initSheaf = `Base category: objects = {Course_k, Seg_k,i, Curing_k}, morphisms = restriction maps Seg_k,i → Course_k and Curing_k → Course_{k+1} (when cooldown=0).
+Sheaf: F assigns feasible local states to each object; restriction maps enforce consistency (e.g., if Curing_k>0, then Course_{k+1} is not placed).
+Global section: assignment selecting exactly one direction per course with curing satisfied throughout.`;
+    sheafNotes.value = localStorage.getItem(sheafKey) || initSheaf;
+    saveSheaf.addEventListener('click', ()=>{ localStorage.setItem(sheafKey, sheafNotes.value); toast('Sheaf notes saved.'); });
+    resetSheaf.addEventListener('click', ()=>{ sheafNotes.value = initSheaf; localStorage.setItem(sheafKey, sheafNotes.value); toast('Notes reset.'); });
+
+    const checklist = [
+      "Defined base objects (courses, segments, curing).",
+      "Specified restriction maps.",
+      "Encoded doping & cooldown as local predicates.",
+      "Identified global sections (complete builds).",
+      "Mapped lens outputs to observed sheaf data.",
+      "Recorded counterexamples / infeasible combos."
+    ];
+    const sectionChecks = document.getElementById('sectionChecks');
+    const checksKey = 'dps-sheaf-checks-v1';
+    const savedChecks = JSON.parse(localStorage.getItem(checksKey) || '[]');
+    checklist.forEach((txt,i)=>{
+      const id = 'chk'+i;
+      const wrap = document.createElement('label');
+      wrap.className='pill';
+      wrap.style.cursor='pointer';
+      wrap.innerHTML = `<input type="checkbox" id="${id}" ${savedChecks.includes(i)?'checked':''}> <span>${txt}</span>`;
+      sectionChecks.appendChild(wrap);
+      wrap.querySelector('input').addEventListener('change', (e)=>{
+        const arr = new Set(JSON.parse(localStorage.getItem(checksKey) || '[]'));
+        if(e.target.checked) arr.add(i); else arr.delete(i);
+        localStorage.setItem(checksKey, JSON.stringify(Array.from(arr)));
+      });
+    });
+
+    // ---------- OPS ---------- //
+    const opsFields = ['opsVision','opsGoal','opsCare','opsRisks','opsMits','opsKill'];
+    const opsKey = 'dps-ops-v1';
+    const opsRaw = JSON.parse(localStorage.getItem(opsKey) || '{}');
+    opsFields.forEach(id=>{
+      const el = document.getElementById(id);
+      if(opsRaw[id]) el.value = opsRaw[id];
+      el.addEventListener('change', ()=>{
+        const obj = JSON.parse(localStorage.getItem(opsKey) || '{}');
+        obj[id] = el.value;
+        localStorage.setItem(opsKey, JSON.stringify(obj));
+        toast('Saved.');
+      });
+    });
+
+    // ---------- EXPORT / IMPORT ---------- //
+    const btnExport = document.getElementById('btnExport');
+    const exportInfo = document.getElementById('exportInfo');
+    const fileImport = document.getElementById('fileImport');
+    const btnResetAll = document.getElementById('btnResetAll');
+
+    btnExport.addEventListener('click', ()=>{
+      const payload = {
+        ledger: JSON.parse(localStorage.getItem(LS_KEY) || 'null'),
+        sheafNotes: localStorage.getItem(sheafKey) || null,
+        checks: JSON.parse(localStorage.getItem(checksKey) || '[]'),
+        ops: JSON.parse(localStorage.getItem(opsKey) || '{}'),
+        meta: { exportedAt: new Date().toISOString() }
+      };
+      const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download='dynamic-project-states.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      exportInfo.textContent = 'Exported dynamic-project-states.json';
+      toast('Exported.');
+    });
+
+    fileImport.addEventListener('change', async (ev)=>{
+      const f = ev.target.files[0]; if(!f) return;
+      try{
+        const txt = await f.text();
+        const data = JSON.parse(txt);
+        if(data.ledger) localStorage.setItem(LS_KEY, JSON.stringify(data.ledger));
+        if(typeof data.sheafNotes==='string') localStorage.setItem(sheafKey, data.sheafNotes);
+        if(Array.isArray(data.checks)) localStorage.setItem(checksKey, JSON.stringify(data.checks));
+        if(data.ops) localStorage.setItem(opsKey, JSON.stringify(data.ops));
+        // refresh UI
+        ledger = loadLedger(); renderLedger();
+        sheafNotes.value = localStorage.getItem(sheafKey) || initSheaf;
+        Array.from(sectionChecks.querySelectorAll('input[type=checkbox]')).forEach((cb,i)=>{
+          cb.checked = (data.checks||[]).includes(i);
+        });
+        opsFields.forEach(id=>{
+          const el = document.getElementById(id);
+          const v = (data.ops||{})[id];
+          if(typeof v==='string') el.value = v;
+        });
+        toast('Import done.');
+      }catch(e){
+        toast('Import error', 'error');
+      }finally{
+        fileImport.value = '';
+      }
+    });
+
+    btnResetAll.addEventListener('click', ()=>{
+      if(confirm('Clear all local notes and edits?')){
+        localStorage.removeItem(LS_KEY);
+        localStorage.removeItem(sheafKey);
+        localStorage.removeItem(checksKey);
+        localStorage.removeItem(opsKey);
+        // reload UI
+        ledger = loadLedger(); renderLedger();
+        sheafNotes.value = initSheaf;
+        Array.from(sectionChecks.querySelectorAll('input[type=checkbox]')).forEach(cb=> cb.checked=false);
+        opsFields.forEach(id=>{
+          const el = document.getElementById(id);
+          el.value = (document.getElementById(id).defaultValue || '');
+        });
+        toast('Cleared.');
+      }
+    });
+
+    // ---------- SMOKE PASS ---------- //
+    app.setAttribute('data-smoke','ok');
+    window.__canvasStatus = 'ready';
+    document.getElementById('statusLabel').textContent = 'ready';
+  }catch(e){
+    fallback(e);
+  }
+
+  // Visibility watchdog
+  (function watchdog(){
+    const timeout = +(app.getAttribute('data-timeout')||'3000');
+    const start = Date.now();
+    const tick = ()=>{
+      if(app.querySelector('[data-smoke="ok"]')){
+        // good
+        return;
+      }
+      if(Date.now() - start > timeout){
+        fallback('timeout');
+        return;
+      }
+      setTimeout(tick, 500);
+    };
+    setTimeout(tick, 500);
+  })();
+})();
+</script>
+</body>
+<footer class="wrap muted">
+  <div class="hr"></div>
+  <p>
+    <strong>Note on provenance:</strong> This ledger and the working models synthesise the project’s prior threads
+    into a single durable artefact. Where verbatim chat logs weren’t available, the key definitions, decisions,
+    and formalisms are preserved in canonical form and cross-cited to the underlying references included above.
+  </p>
+</footer>
+</html>

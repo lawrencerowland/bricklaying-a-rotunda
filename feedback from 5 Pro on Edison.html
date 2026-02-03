@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dynamic Project States — Lens‑based Toy Model (Discrete Bricks + Continuous Slot)</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#12161b; --panel-hi:#182029; --ink:#e6eef7; --muted:#9fb2c6;
+    --accent:#62d2ff; --ok:#32d296; --warn:#f5a623; --err:#ff5b6b; --grid:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--ink); background:linear-gradient(180deg,#0b0d10,#0a0e13);
+    font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+  a{color:var(--accent); text-decoration:none} a:hover{text-decoration:underline}
+  h1,h2,h3{margin:0 0 calc(1*var(--grid))} h1{font-size:clamp(20px,4vw,32px)}
+  h2{font-size:clamp(18px,3vw,24px)} h3{font-size:clamp(16px,2.4vw,20px)}
+  small, .muted{color:var(--muted)}
+  code, pre{font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+  .wrap{display:flex; flex-direction:column; min-height:100%}
+  header{
+    background:radial-gradient(100% 120% at 0% 0%, #16202c 0%, #0b0f15 60%);
+    border-bottom:1px solid rgba(255,255,255,0.05);
+    padding:calc(2*var(--grid)) clamp(12px,3vw,24px);
+  }
+  header .kicker{letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  .grid{
+    display:grid; gap:clamp(12px,2vw,16px);
+    grid-template-columns: 1.2fr 1fr;
+    padding: clamp(12px,3vw,24px);
+  }
+  @media (max-width: 1100px){ .grid{grid-template-columns: 1fr} }
+  .panel{
+    background:var(--panel); border:1px solid rgba(255,255,255,0.06);
+    border-radius:12px; padding:clamp(12px,2.2vw,18px); box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  }
+  .panel h3{display:flex; align-items:center; gap:.6rem}
+  .tag{display:inline-block; padding:.1rem .5rem; border:1px solid rgba(255,255,255,0.12); border-radius:999px; font-size:.78rem; color:var(--muted)}
+  .stack{display:grid; gap:12px}
+  .cols{display:grid; gap:12px; grid-template-columns: 1fr 1fr}
+  @media (max-width: 820px){ .cols{grid-template-columns: 1fr} }
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  .kbd{background:#1a2130; padding:.12rem .4rem; border-radius:6px; border:1px solid rgba(255,255,255,.08); font-family: ui-monospace,monospace; font-size:.86em}
+  .outline{border-left:3px solid rgba(98,210,255,.6); padding-left:12px}
+  .panel-hi{background:var(--panel-hi)}
+  /* Interactive shell */
+  .min-h-64{min-height:16rem}
+  .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+  .toolbar label{font-size:.9rem}
+  .toolbar input, .toolbar select, .toolbar button, .toolbar textarea{
+    background:#0f141a; color:var(--ink); border:1px solid rgba(255,255,255,0.12);
+    border-radius:8px; padding:.4rem .6rem; font-size:.95rem;
+  }
+  .toolbar input[type="number"]{width:6.5rem}
+  .toolbar input[type="text"]{min-width:12rem}
+  .toolbar button{cursor:pointer}
+  .btn{background:#15202b; border-color:#2a3a49}
+  .btn:hover{background:#1a2734}
+  .btn-ghost{background:transparent; border-color:rgba(255,255,255,0.16)}
+  .btn-accent{background:linear-gradient(180deg,#1d6cff,#0dcfff); border:none; color:#04121a}
+  .legend{font-size:.85rem; color:var(--muted)}
+  .kv{display:grid; grid-template-columns: max-content 1fr; gap:.35rem 1rem; font-variant-numeric:tabular-nums}
+  canvas, svg{display:block}
+  .viz{display:grid; grid-template-columns: 1.2fr 1fr; gap:12px}
+  @media (max-width: 1020px){ .viz{grid-template-columns:1fr} }
+  .log{height:14rem; width:100%; font-size:.86rem; resize:vertical}
+  .wires{width:100%; aspect-ratio: 2.2 / 1; border-radius:10px; background:#0c1117; border:1px solid rgba(255,255,255,0.08)}
+  .footnotes{font-size:.92rem}
+  .ref{display:flex; gap:.5rem; align-items:baseline}
+  .ref code{background:#15202b; border:1px solid rgba(255,255,255,.08); border-radius:6px; padding:.06rem .4rem}
+  .callout{display:flex; gap:10px; padding:10px 12px; border:1px dashed rgba(255,255,255,.18); border-radius:8px; background:#10151b}
+  /* toast */
+  .toaster{position:fixed; right:14px; bottom:14px; display:grid; gap:10px; z-index:9999}
+  .toast{padding:10px 12px; background:#0f1520; color:#eaf4ff; border:1px solid rgba(255,255,255,.12);
+         border-left:4px solid var(--ok); border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,.45)}
+  .toast.error{border-left-color:var(--err)}
+  .sep{height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent); margin:8px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Review + Working Proof‑of‑Concept</div>
+    <h1>Ends → Ways → Means: a Lens‑based dynamic of project states</h1>
+    <p class="muted">This page critiques your approach, pins it to the Spivak/Myers lens formalism and operadic process theories, and ships a runnable toy model:
+      (A) discrete brick courses with curing/doping constraints, and (B) a continuous circular motion observed through a slot. It also provides a formal lens, wiring diagram, and analytics.</p>
+  </header>
+
+  <main class="grid" id="app" data-timeout="3000" aria-live="polite">
+    <!-- Left: Review + Formalization -->
+    <section class="panel stack" aria-labelledby="review-title">
+      <h2 id="review-title">Executive review</h2>
+      <div class="cols">
+        <div class="panel panel-hi">
+          <h3>What’s strong</h3>
+          <ul>
+            <li>Mapping “blueprint ↔ state space” and “routes ↔ sections” is well‑posed, with a clean discrete approximation (courses × bricks) and a continuous limit (S¹ dynamics).</li>
+            <li>Open dynamics via lenses aligns with both Spivak’s and Myers’s treatments: systems as lenses with <span class="kbd">get/expose</span> and <span class="kbd">put/update</span>, and wiring by lens composition. :contentReference[oaicite:0]{index=0}</li>
+            <li>Operadic/wiring viewpoint future‑proofs composition and higher‑order constraints; the undirected wiring and Dirac‑relational angle is a good match for resources/constraints. :contentReference[oaicite:1]{index=1}</li>
+          </ul>
+        </div>
+        <div class="panel panel-hi">
+          <h3>What to tighten</h3>
+          <ul>
+            <li><b>Lens notation</b>: adopt a single convention. Below we standardize on Myers’s “passforward / passback” lens <span class="kbd">(f♯ over f)</span> in a cartesian category, and show systems as lenses. :contentReference[oaicite:2]{index=2}</li>
+            <li><b>Constraints</b>: represent doping/curing as a policy that gates transitions and contributes wait‑time—kept orthogonal to path enumeration to avoid combinatorial blow‑ups.</li>
+            <li><b>Open vs closed</b>: make the “openness” explicit via lenses: inputs feed <i>put</i> (update), outputs are <i>get</i> (expose). Wiring then becomes composition of lenses/wiring‑operad operations. </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Formalization in one page</h3>
+        <div class="stack">
+          <div class="outline">
+            <p><b>Lens (Myers/Spivak style).</b> In a cartesian category <i>C</i>, a lens
+              <code>(f♯ over f) : (A⁻ over A⁺) ⇆ (B⁻ over B⁺)</code> consists of a passforward
+              <code>f : A⁺ → B⁺</code> and a passback <code>f♯ : A⁺ × B⁻ → A⁻</code>, with composition
+              <code>(g♯ over g) ∘ (f♯ over f) = ( (a⁺, c⁻) ↦ f♯(a⁺, g♯(f(a⁺), c⁻))  over g∘f )</code>. :contentReference[oaicite:4]{index=4}</p>
+            <p><b>Systems as lenses.</b> A deterministic system <code>S</code> with state <code>State_S</code>,
+              input <code>In_S</code>, output <code>Out_S</code>, update <code>update_S : State_S × In_S → State_S</code>, and expose
+              <code>expose_S : State_S → Out_S</code> is the lens <code>(update_S over expose_S) : (State_S over State_S) ⇆ (In_S over Out_S)</code>. Wiring systems is lens composition (or via wiring operads). :contentReference[oaicite:5]{index=5}</p>
+            <p><b>Open systems + wiring.</b> Myers shows open dynamical systems as lenses in a double‑categorical framing: contravariant “plugging” corresponds to lens composition; steady states/trajectories appear as covariant parts. :contentReference[oaicite:6]{index=6}</p>
+            <p><b>Operadic view.</b> Wiring diagrams form operads; algebras thereof instantiate process theories. This perspective comfortably generalizes to time‑neutral, causal, and higher‑order settings. :contentReference[oaicite:7]{index=7}  It also supports undirected wiring and Dirac‑relational semantics for constraints. :contentReference[oaicite:8]{index=8}</p>
+          </div>
+          <div class="callout">
+            <div>✅</div>
+            <div>
+              <b>Program management note.</b> This demo follows a “minimum system” approach:
+              build the smallest working module that validates the theory, instrument it, and iterate—tracking risks/bottlenecks and transition paths per the Research Leaders’ Playbook. :contentReference[oaicite:9]{index=9}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Chosen lens for the continuous slot system (arena→arena)</h3>
+        <p>We adopt Myers’s convention where <i>put/update</i> sits “on top” and <i>get/expose</i> “on bottom”. The state is <code>S = (θ, ω, R)</code> with dynamics <code>dθ/dt = ω</code> (constant ω here). Define arenas:</p>
+        <ul>
+          <li><b>Input arena</b> <code>I = (θ₀, ω₀, R, θ_slot, α)</code></li>
+          <li><b>Output arena</b> <code>O = stream of (t, θ(t)) while θ(t) ∈ [θ_slot − α/2, θ_slot + α/2]</code> (null outside)</li>
+        </ul>
+        <p><b>Lens</b> <code>L = (put over get) : (S over S) ⇆ (I over O)</code> with
+          <code>get(s) = visibility stream</code> and <code>put(s, i) = s' = (θ₀, ω₀, R)</code> (and slot parameters stored as context for <code>get</code>). This realizes the open system mapping arena→arena; wiring is lens composition with controllers/schedulers. :contentReference[oaicite:10]{index=10}</p>
+        <div class="legend">This matches Spivak’s “systems and wiring as lenses” view (via bundles/wiring diagrams) and can be lifted operadically. :contentReference[oaicite:11]{index=11}</div>
+      </div>
+
+      <div class="panel">
+        <h3>Wiring diagram (narrative)</h3>
+        <svg class="wires" role="img" aria-label="Wiring diagram of the lens with put on top and get on bottom" viewBox="0 0 1100 500">
+          <defs>
+            <linearGradient id="grad" x1="0" x2="1"><stop offset="0" stop-color="#0dcfff"/><stop offset="1" stop-color="#1d6cff"/></linearGradient>
+          </defs>
+          <rect x="40" y="40" width="1020" height="420" rx="16" fill="#0f141b" stroke="rgba(255,255,255,.12)"/>
+          <!-- System box -->
+          <rect x="430" y="140" width="240" height="220" rx="12" fill="#141b22" stroke="rgba(255,255,255,.18)"/>
+          <text x="550" y="170" text-anchor="middle" font-size="16" fill="#cfe8ff">System S (θ, ω, R)</text>
+          <!-- put (top) -->
+          <rect x="140" y="80" width="180" height="40" rx="8" fill="#12212e" stroke="rgba(255,255,255,.18)"/>
+          <text x="230" y="105" text-anchor="middle" font-size="14" fill="#cfe8ff">Input arena I</text>
+          <path d="M 320 100 C 380 100 400 100 430 160" stroke="url(#grad)" stroke-width="3" fill="none" />
+          <text x="370" y="92" font-size="12" fill="#9fb2c6">put/update</text>
+          <!-- get (bottom) -->
+          <rect x="780" y="380" width="180" height="40" rx="8" fill="#12212e" stroke="rgba(255,255,255,.18)"/>
+          <text x="870" y="405" text-anchor="middle" font-size="14" fill="#cfe8ff">Output arena O</text>
+          <path d="M 670 300 C 760 330 760 350 780 400" stroke="url(#grad)" stroke-width="3" fill="none"/>
+          <text x="690" y="318" font-size="12" fill="#9fb2c6">get/expose</text>
+          <!-- controller box feeding I -->
+          <rect x="80" y="200" width="220" height="120" rx="12" fill="#162433" stroke="rgba(255,255,255,.18)"/>
+          <text x="190" y="230" text-anchor="middle" font-size="15" fill="#cfe8ff">Controller</text>
+          <text x="190" y="250" text-anchor="middle" font-size="12" fill="#9fb2c6">θ₀, ω₀, R, θ_slot, α</text>
+          <path d="M 190 320 C 210 360 220 380 230 400" stroke="#2b90ff" stroke-width="2" fill="none"/>
+          <circle cx="230" cy="400" r="4" fill="#2b90ff"/>
+          <text x="252" y="402" font-size="12" fill="#9fb2c6">feedback wiring (optional)</text>
+          <path d="M 220 200 C 220 160 220 120 230 120" stroke="#2b90ff" stroke-width="2" fill="none"/>
+          <circle cx="230" cy="120" r="4" fill="#2b90ff"/>
+        </svg>
+        <p class="legend">This picture corresponds to a lens from <code>(S over S)</code> to <code>(I over O)</code>, composed in a wiring‑operad style. </p>
+      </div>
+    </section>
+
+    <!-- Right: Interactive demos -->
+    <section class="panel min-h-64" id="demo">
+      <h2>Interactive toy model</h2>
+
+      <div class="stack">
+        <!-- Tabs -->
+        <div class="toolbar" role="tablist" aria-label="Simulation tabs">
+          <button class="btn btn-accent" role="tab" aria-selected="true" id="tab-bricks">Discrete: Bricks</button>
+          <button class="btn btn-ghost" role="tab" aria-selected="false" id="tab-slot">Continuous: Slot</button>
+        </div>
+
+        <!-- Bricks panel -->
+        <div id="panel-bricks" role="tabpanel" aria-labelledby="tab-bricks" class="stack">
+          <div class="toolbar" aria-label="Brick controls">
+            <label>N (bricks/course) <input type="number" id="N" value="16" min="3" step="1"></label>
+            <label>K (courses) <input type="number" id="K" value="6" min="1" step="1"></label>
+            <label>Base cure <input type="number" id="baseCure" value="2" min="0" step="1"></label>
+            <label>β (cure vs. doping) <input type="number" id="betaCure" value="1" min="0" step="0.5"></label>
+            <label>Direction policy
+              <select id="dirPolicy">
+                <option value="cw">Always CW</option>
+                <option value="ccw">Always CCW</option>
+                <option value="alt" selected>Alternate per course</option>
+              </select>
+            </label>
+            <label>Δ (doping per course)
+              <input type="text" id="doping" value="[0,1,2,0,1,0]">
+            </label>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn" id="step">Step</button>
+            <button class="btn" id="auto">Auto ▷</button>
+            <button class="btn btn-ghost" id="reset">Reset</button>
+            <button class="btn btn-ghost" id="randomize">Randomize Δ</button>
+            <span class="tag">doping rule: cure = base + β·δ, direction forbidden if δ≥3 and policy ≠ forced</span>
+          </div>
+
+          <div class="viz">
+            <canvas id="cvBricks" width="700" height="500" aria-label="Brick courses visualization"></canvas>
+            <div class="panel-hi stack">
+              <h3>Analytics</h3>
+              <div class="kv" id="brickStats">
+                <div>Total placed:</div><div id="placedOut">0</div>
+                <div>Course:</div><div id="courseOut">0 / 0</div>
+                <div>Index:</div><div id="indexOut">0 / 0</div>
+                <div>Cooldown c:</div><div id="coolOut">0</div>
+                <div>Wait time:</div><div id="waitOut">0</div>
+                <div>Build time:</div><div id="timeOut">0</div>
+                <div>Waiting %:</div><div id="waitPct">0%</div>
+                <div>Feasible direction patterns:</div><div id="pathCount">—</div>
+              </div>
+              <div class="sep"></div>
+              <div class="toolbar">
+                <button class="btn" id="enumerate">Enumerate paths</button>
+                <button class="btn btn-ghost" id="exportLog">Export log</button>
+              </div>
+              <textarea id="logBricks" class="log" readonly aria-label="Brick event log"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slot panel -->
+        <div id="panel-slot" role="tabpanel" aria-labelledby="tab-slot" class="stack" hidden>
+          <div class="toolbar" aria-label="Slot controls">
+            <label>θ₀ (deg) <input type="number" id="th0" value="30" step="1"></label>
+            <label>ω (deg/s) <input type="number" id="om" value="45" step="1"></label>
+            <label>R (px) <input type="number" id="rad" value="140" step="1" min="20"></label>
+            <label>θ_slot (deg) <input type="number" id="thS" value="0" step="1"></label>
+            <label>α (deg) <input type="number" id="alpha" value="60" step="1" min="1" max="360"></label>
+          </div>
+          <div class="toolbar">
+            <button class="btn" id="toggleCont">Run ▷</button>
+            <button class="btn btn-ghost" id="calcCross">Compute crossings</button>
+            <span class="tag">expected visibility = α / 360</span>
+          </div>
+          <div class="viz">
+            <canvas id="cvSlot" width="700" height="500" aria-label="Circular motion through slot"></canvas>
+            <div class="panel-hi stack">
+              <h3>Numbers</h3>
+              <div class="kv" id="slotStats">
+                <div>Measured visible % (last lap):</div><div id="visPct">0%</div>
+                <div>Expected visible %:</div><div id="visExp">0%</div>
+                <div>Crossing interval (s):</div><div id="interval">—</div>
+                <div>Next entries (t, θ):</div><div id="entries">—</div>
+                <div>Next exits (t, θ):</div><div id="exits">—</div>
+              </div>
+              <div class="sep"></div>
+              <textarea id="logSlot" class="log" readonly aria-label="Slot observation log"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <noscript>Interactive visualisation</noscript>
+      </div>
+    </section>
+  </main>
+
+  <section class="panel footnotes" style="margin: 0 clamp(12px,3vw,24px) clamp(12px,3vw,24px)">
+    <h2>References & provenance</h2>
+    <p class="ref">Myers, <i>Dynamics</i> (2023): formal lens (passforward/passback), systems as lenses, and composition; also functorial wiring and double categories. :contentReference[oaicite:13]{index=13}</p>
+    <p class="ref">Myers, <i>Double Categories of Open Systems</i> (2021): open dynamical systems, contravariant “plugging” via lenses, double‑categorical framing. :contentReference[oaicite:14]{index=14}</p>
+    <p class="ref">Spivak, <i>Lenses</i> (2019): lenses, wiring diagrams as lenses, bundles perspective. :contentReference[oaicite:15]{index=15}</p>
+    <p class="ref">Lynch, <i>Relational Composition of Physical Systems</i> (2022): undirected wiring operad (UWD) and Dirac relations. :contentReference[oaicite:16]{index=16}</p>
+    <p class="ref">Selby–Stasinou–Wilson–Coecke, <i>Generalised Process Theories</i> (2025): operadic algebras for process theories, beyond SMCs, time‑neutral/causal/higher‑order. :contentReference[oaicite:17]{index=17}</p>
+
+    <div class="sep"></div>
+    <p class="ref">Contextual documents cited as provided (explicit markers): Lynch 2022 (UWD/Dirac) :contentReference[oaicite:18]{index=18}; Coecke <i>Generalised Process Theories</i> (overview) :contentReference[oaicite:19]{index=19}; Coecke GPTs in context :contentReference[oaicite:20]{index=20}; Canvas/interactive guidelines (this page complies) :contentReference[oaicite:21]{index=21}; Research Leaders’ Playbook (program tactics) :contentReference[oaicite:22]{index=22}.</p>
+  </section>
+</div>
+
+<div class="toaster" id="toaster" aria-live="polite"></div>
+
+<script>
+(function(){
+  // --- boot + watchdog ---
+  const app = document.getElementById('app');
+  const toaster = document.getElementById('toaster');
+  let watchdogTimer = null, watchdogTicks = 0;
+  function toast(msg, type){ const el=document.createElement('div'); el.className='toast'+(type?' '+type:''); el.textContent=msg; toaster.appendChild(el); setTimeout(()=>el.remove(), 4200); }
+  function fallback(reason){
+    window.__canvasStatus = 'fallback';
+    toast('Fallback mode: '+reason, 'error');
+    // degrade to static diagram (already included above)
+  }
+  function ok(){ app.setAttribute('data-smoke','ok'); window.__canvasStatus='ready'; }
+  function watchdog(){
+    if(app.getAttribute('data-smoke')==='ok'){ clearInterval(watchdogTimer); return; }
+    watchdogTicks++; if(watchdogTicks*500 >= (+app.dataset.timeout||3000)){ fallback('timeout'); clearInterval(watchdogTimer); }
+  }
+  watchdogTimer = setInterval(watchdog, 500);
+
+  // --- Utilities ---
+  const clamp = (v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  const TAU = Math.PI*2; const deg2rad = d=>d*Math.PI/180; const rad2deg = r=>r*180/Math.PI;
+  function modTau(a){ a%=TAU; return a<0?a+TAU:a; }
+
+  // --- Tabs ---
+  const tabBr = document.getElementById('tab-bricks');
+  const tabSl = document.getElementById('tab-slot');
+  const pnlBr = document.getElementById('panel-bricks');
+  const pnlSl = document.getElementById('panel-slot');
+  function selectTab(which){
+    const isBr = which==='bricks';
+    tabBr.classList.toggle('btn-accent', isBr);
+    tabBr.classList.toggle('btn-ghost', !isBr);
+    tabSl.classList.toggle('btn-accent', !isBr);
+    tabSl.classList.toggle('btn-ghost', isBr);
+    tabBr.setAttribute('aria-selected', isBr); tabSl.setAttribute('aria-selected', !isBr);
+    pnlBr.hidden = !isBr; pnlSl.hidden = isBr;
+  }
+  tabBr.addEventListener('click',()=>selectTab('bricks'));
+  tabSl.addEventListener('click',()=>selectTab('slot'));
+
+  // ============================
+  // Discrete: Brickwork dynamics
+  // ============================
+  const cvB = document.getElementById('cvBricks'); const gB = cvB.getContext('2d');
+  const NEl = document.getElementById('N'), KEl = document.getElementById('K');
+  const baseCureEl = document.getElementById('baseCure'), betaCureEl = document.getElementById('betaCure');
+  const dirPolicyEl = document.getElementById('dirPolicy'), dopingEl = document.getElementById('doping');
+  const placedOut = document.getElementById('placedOut'), courseOut=document.getElementById('courseOut');
+  const indexOut=document.getElementById('indexOut'), coolOut=document.getElementById('coolOut');
+  const waitOut=document.getElementById('waitOut'), timeOut=document.getElementById('timeOut'), waitPct=document.getElementById('waitPct');
+  const pathCount=document.getElementById('pathCount'); const logBricks=document.getElementById('logBricks');
+  const btnStep=document.getElementById('step'), btnAuto=document.getElementById('auto'), btnReset=document.getElementById('reset');
+  const btnRand=document.getElementById('randomize'), btnEnum=document.getElementById('enumerate'), btnExportLog=document.getElementById('exportLog');
+
+  let N=+NEl.value, K=+KEl.value, baseCure=+baseCureEl.value, betaCure=+betaCureEl.value;
+  let dirPolicy = dirPolicyEl.value; let Delta = parseDelta(dopingEl.value, K);
+  let auto=false, placed=0, tSteps=0, waitSteps=0;
+
+  const state = { k:0, j:0, c:0, d: +1, placedFlags:[] };
+  function initState(){
+    N=+NEl.value; K=+KEl.value; baseCure=+baseCureEl.value; betaCure=+betaCureEl.value; dirPolicy=dirPolicyEl.value; Delta=parseDelta(dopingEl.value,K);
+    state.k=0; state.j=0; state.c=0; state.d=(dirPolicy==='ccw'?-1:+1); state.placedFlags=[];
+    for(let kk=0; kk<K; kk++){ state.placedFlags[kk]=Array(N).fill(false); }
+    placed=0; tSteps=0; waitSteps=0; logBricks.value='[reset]\n';
+    refreshStats(); drawBricks();
+  }
+  function parseDelta(str,K){
+    try{ const v=JSON.parse(str); const arr=Array.isArray(v)?v:[]; const out=[];
+      for(let i=0;i<K;i++) out[i]=+arr[i%arr.length]||0; return out;
+    }catch{ return Array.from({length:K}, (_,i)=> (i%3===0?1:0)); }
+  }
+  function base_cure(delta){ return Math.max(0, Math.round(baseCure + betaCure*delta)); }
+  function directionAllowed(delta, policy, d){
+    if(policy==='cw' || policy==='ccw') return true;
+    // if doping >=3 then force CW on odd courses, CCW on even as an example constraint
+    if(delta>=3){ return ( (d>0) === ( (state.k%2)===0 ) ); }
+    return true;
+  }
+  function currentDir(){
+    if(dirPolicy==='cw') return +1;
+    if(dirPolicy==='ccw') return -1;
+    // alternate per course
+    return (state.k%2===0) ? +1 : -1;
+  }
+  function idxStep(j,d){ return ( (j + (d>0?1:-1)) + N ) % N; }
+
+  function logB(s){ logBricks.value += s+'\n'; logBricks.scrollTop = logBricks.scrollHeight; }
+
+  function stepDiscrete(){
+    if(state.k>=K){ logB('complete'); return; }
+    tSteps++;
+    if(state.c>0){ state.c--; waitSteps++; logB(`cooldown k=${state.k}, c=${state.c}`); refreshStats(); return; }
+    state.d = currentDir();
+    if(!directionAllowed(Delta[state.k]||0, dirPolicy, state.d)){ // cannot proceed; wait one unit to simulate policy hold
+      waitSteps++; logB(`direction forbidden at k=${state.k}, waiting`); refreshStats(); return;
+    }
+    // place a brick
+    if(!state.placedFlags[state.k][state.j]){
+      state.placedFlags[state.k][state.j] = true; placed++;
+      logB(`place k=${state.k} j=${state.j} dir=${state.d>0?'CW':'CCW'}`);
+    }
+    // advance j
+    const nextJ = idxStep(state.j, state.d);
+    // if next wraps to already placed all?
+    const courseDone = state.placedFlags[state.k].every(v=>v);
+    if(courseDone){
+      const cd = base_cure(Delta[state.k]||0);
+      logB(`course ${state.k} complete; set cooldown ${cd}`);
+      state.k++; state.j= (state.k<K ? (state.d>0?0:N-1) : 0);
+      if(state.k<K) state.c = cd; else state.c=0;
+    } else {
+      state.j = nextJ;
+      // if we reached an already placed brick due to odd sequence, skip to next unplaced
+      let safety=N+1;
+      while(state.placedFlags[state.k][state.j] && safety-->0){ state.j = idxStep(state.j, state.d); }
+    }
+    refreshStats(); drawBricks();
+  }
+
+  function refreshStats(){
+    placedOut.textContent = placed;
+    courseOut.textContent = `${clamp(state.k,0,K)} / ${K}`;
+    indexOut.textContent = `${clamp(state.j,0,N-1)} / ${N}`;
+    coolOut.textContent = state.c;
+    waitOut.textContent = waitSteps;
+    timeOut.textContent = tSteps;
+    waitPct.textContent = (tSteps? (100*waitSteps/tSteps).toFixed(1):0)+'%';
+  }
+
+  function drawBricks(){
+    const w=cvB.width, h=cvB.height; const cx=w/2, cy=h/2;
+    gB.clearRect(0,0,w,h);
+    // background
+    gB.fillStyle='#0c1117'; gB.fillRect(0,0,w,h);
+    const baseR = Math.min(w,h)/3;
+    const ringW = 12;
+    for(let kk=0; kk<K; kk++){
+      const R = baseR + (kk-(K-1)/2)* (ringW+6);
+      // bricks of course kk
+      for(let j=0;j<N;j++){
+        const a0 = j*TAU/N, a1 = (j+1)*TAU/N;
+        gB.beginPath();
+        gB.arc(cx,cy,R,a0,a1);
+        gB.lineWidth = ringW;
+        const placed = state.placedFlags[kk] && state.placedFlags[kk][j];
+        gB.strokeStyle = placed ? '#3cc9c9' : 'rgba(160,180,200,0.25)';
+        gB.stroke();
+      }
+      // course label
+      gB.fillStyle='rgba(255,255,255,0.4)'; gB.font='12px ui-monospace';
+      gB.fillText(`k=${kk} δ=${Delta[kk]??0}`, 12, 18+kk*14);
+    }
+    // cursor and cooldown ring for current course
+    if(state.k<K){
+      const R = baseR + (state.k-(K-1)/2)* (ringW+6);
+      const a0 = state.j*TAU/N, a1 = (state.j+1)*TAU/N;
+      gB.beginPath(); gB.arc(cx,cy,R,a0,a1); gB.lineWidth=ringW+2; gB.strokeStyle='#ffd166'; gB.stroke();
+      if(state.c>0){
+        const p = 1 - state.c/Math.max(1, base_cure(Delta[state.k]||0));
+        gB.beginPath(); gB.arc(cx,cy,R+ringW*1.6, -Math.PI/2, -Math.PI/2 + TAU*p);
+        gB.lineWidth=6; gB.strokeStyle='#fa0'; gB.stroke();
+      }
+    }
+  }
+
+  // enumerate feasible direction patterns given policy and doping constraints
+  function enumeratePatterns(){
+    // For simplicity: each course chooses dir ∈ {CW,CCW} unless forbidden by doping rule.
+    // If policy is forced (cw/ccw), count=1. If alt, the pattern is predetermined; count=1.
+    // If policy = alt, we still check doping forbids the chosen direction -> then 0.
+    let count=1;
+    if(dirPolicy==='cw' || dirPolicy==='ccw'){
+      // verify not forbidden
+      for(let k=0;k<K;k++){
+        const d = (dirPolicy==='cw')?+1:-1;
+        if(!directionAllowed(Delta[k]||0, dirPolicy, d)) { count=0; break; }
+      }
+    }else{
+      // alternate
+      for(let k=0;k<K;k++){
+        const d = (k%2===0)?+1:-1;
+        if(!directionAllowed(Delta[k]||0, dirPolicy, d)) { count=0; break; }
+      }
+    }
+    pathCount.textContent = count.toString();
+    if(count===0) toast('No feasible direction pattern under current Δ and policy.','error');
+  }
+
+  // wire controls
+  btnStep.addEventListener('click', stepDiscrete);
+  btnAuto.addEventListener('click', ()=>{
+    auto=!auto; btnAuto.textContent = auto ? 'Auto ❚❚' : 'Auto ▷';
+  });
+  btnReset.addEventListener('click', initState);
+  btnRand.addEventListener('click', ()=>{
+    const Ktmp=+KEl.value;
+    const arr = Array.from({length:Ktmp},()=>Math.floor(Math.random()*4));
+    dopingEl.value = JSON.stringify(arr); Delta=parseDelta(dopingEl.value,Ktmp); enumeratePatterns(); drawBricks();
+  });
+  btnEnum.addEventListener('click', enumeratePatterns);
+  btnExportLog.addEventListener('click', ()=>{
+    const blob = new Blob([logBricks.value], {type:'text/plain'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='brick_log.txt'; a.click();
+  });
+  [NEl,KEl,baseCureEl,betaCureEl,dirPolicyEl,dopingEl].forEach(el=> el.addEventListener('change', initState));
+
+  // animation loop
+  function tickBricks(){ if(auto) stepDiscrete(); drawBricks(); requestAnimationFrame(tickBricks); }
+
+  // =============================
+  // Continuous: slot observation
+  // =============================
+  const cvS = document.getElementById('cvSlot'); const gS = cvS.getContext('2d');
+  const th0El=document.getElementById('th0'), omEl=document.getElementById('om'), radEl=document.getElementById('rad'), thSEl=document.getElementById('thS'), alphaEl=document.getElementById('alpha');
+  const btnRun=document.getElementById('toggleCont'), btnCross=document.getElementById('calcCross');
+  const visPctEl=document.getElementById('visPct'), visExpEl=document.getElementById('visExp'), intervalEl=document.getElementById('interval'), entriesEl=document.getElementById('entries'), exitsEl=document.getElementById('exits');
+  const logSlot = document.getElementById('logSlot');
+
+  let theta=deg2rad(+th0El.value), omega=deg2rad(+omEl.value), radius=+radEl.value, thetaSlot=deg2rad(+thSEl.value), alpha=deg2rad(+alphaEl.value);
+  let contOn=false, last=performance.now(); let visibleCount=0, lapAngle=0, lastLapVis=0;
+
+  function updateParamsSlot(){
+    theta=deg2rad(+th0El.value); omega=deg2rad(+omEl.value); radius=+radEl.value; thetaSlot=deg2rad(+thSEl.value); alpha=deg2rad(+alphaEl.value);
+    visibleCount=0; lapAngle=0; lastLapVis=0;
+    visExpEl.textContent = ((+alphaEl.value/360*100).toFixed(1))+'%';
+  }
+  [th0El,omEl,radEl,thSEl,alphaEl].forEach(el=>el.addEventListener('change',updateParamsSlot));
+  updateParamsSlot();
+
+  function inSlot(th){
+    let a0 = modTau(thetaSlot - alpha/2), a1 = modTau(thetaSlot + alpha/2);
+    th = modTau(th);
+    if(a0<=a1) return (th>=a0 && th<=a1);
+    return (th>=a0 || th<=a1);
+  }
+  function drawSlot(){
+    const w=cvS.width, h=cvS.height; const cx=w/2, cy=h/2;
+    gS.clearRect(0,0,w,h);
+    gS.fillStyle='#0c1117'; gS.fillRect(0,0,w,h);
+    // circle
+    gS.beginPath(); gS.arc(cx,cy,radius,0,TAU); gS.strokeStyle='rgba(200,220,255,.25)'; gS.lineWidth=2; gS.stroke();
+    // slot arc
+    gS.beginPath(); gS.arc(cx,cy,radius, thetaSlot-alpha/2, thetaSlot+alpha/2);
+    gS.strokeStyle='#38f'; gS.lineWidth=8; gS.stroke();
+    // marker
+    gS.beginPath(); gS.arc(cx+radius*Math.cos(theta), cy+radius*Math.sin(theta), 7, 0, TAU);
+    gS.fillStyle = inSlot(theta)? '#27e8a7' : '#f25f5c'; gS.fill();
+    // labels
+    gS.fillStyle='rgba(255,255,255,.7)'; gS.font='12px ui-monospace';
+    gS.fillText(`θ=${rad2deg(modTau(theta)).toFixed(1)}°  ω=${rad2deg(omega).toFixed(1)}°/s`,12,18);
+  }
+  function stepSlot(dt){
+    const prevVisible = inSlot(theta);
+    theta = theta + omega*dt;
+    // track lap & visibility
+    lapAngle += Math.abs(omega*dt);
+    const curVisible = inSlot(theta);
+    if(curVisible && !prevVisible){ logSlot.value += `enter t=${(performance.now()/1000).toFixed(2)}, θ=${rad2deg(modTau(theta)).toFixed(1)}°\n`; logSlot.scrollTop=logSlot.scrollHeight; }
+    if(!curVisible && prevVisible){ logSlot.value += `exit  t=${(performance.now()/1000).toFixed(2)}, θ=${rad2deg(modTau(theta)).toFixed(1)}°\n`; logSlot.scrollTop=logSlot.scrollHeight; }
+    if(curVisible) visibleCount += Math.abs(omega*dt);
+    if(lapAngle>=TAU){
+      const vis = visibleCount/TAU; lastLapVis = vis;
+      visPctEl.textContent = (100*vis).toFixed(1)+'%';
+      visibleCount = 0; lapAngle = 0;
+    }
+  }
+  function tickSlot(ts){
+    const dt = (ts-last)/1000; last = ts;
+    if(contOn) stepSlot(dt);
+    drawSlot(); requestAnimationFrame(tickSlot);
+  }
+  btnRun.addEventListener('click', ()=>{
+    contOn = !contOn; btnRun.textContent = contOn ? 'Pause ❚❚' : 'Run ▷';
+  });
+
+  function computeCrossings(){
+    // Analytic entries/exits for constant ω: solve θ0+ω t = a (mod 2π)
+    const th0 = modTau(theta), w = omega; const a0 = modTau(thetaSlot - alpha/2), a1 = modTau(thetaSlot + alpha/2);
+    if(w===0){ entriesEl.textContent='—'; exitsEl.textContent='—'; intervalEl.textContent='∞'; return; }
+    const sign = w>0?1:-1; const baseInterval = TAU/Math.abs(w);
+    intervalEl.textContent = baseInterval.toFixed(3);
+    function timesAtAngle(a, count=5){
+      const arr=[];
+      for(let n=0;n<count;n++){
+        let t = (a - th0 + n*TAU*sign)/w;
+        if(t<0){ const k = Math.ceil(-t/baseInterval); t += k*baseInterval; }
+        arr.push(t);
+      }
+      return arr;
+    }
+    const ent = timesAtAngle(sign>0?a0:a1,6).slice(0,5);
+    const exi = timesAtAngle(sign>0?a1:a0,6).slice(0,5);
+    entriesEl.textContent = ent.map(t=>t.toFixed(3)).join(', ');
+    exitsEl.textContent = exi.map(t=>t.toFixed(3)).join(', ');
+  }
+  btnCross.addEventListener('click', computeCrossings);
+
+  // --- Start loops ---
+  try{
+    initState(); requestAnimationFrame(tickBricks);
+    requestAnimationFrame((ts)=>{ last=ts; requestAnimationFrame(tickSlot); });
+    ok();
+  }catch(e){
+    console.error(e); fallback('init-error');
+  }
+
+})();
+</script>
+</body>
+</html>

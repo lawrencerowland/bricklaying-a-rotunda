@@ -1,0 +1,528 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dynamic Project States – Toy Model & Lens Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #f8f9fb; color: #222; }
+    header { background: #111827; color: white; padding: 16px 20px; }
+    header h1 { margin: 0 0 4px 0; font-size: 20px; }
+    header p { margin: 0; opacity: 0.8; font-size: 13px; }
+    main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+    .card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    h2 { font-size: 18px; margin: 0 0 8px 0; }
+    h3 { font-size: 16px; margin: 10px 0 6px 0; }
+    .row { display: flex; flex-wrap: wrap; gap: 16px; }
+    .col { flex: 1 1 380px; min-width: 300px; }
+    label { display:block; font-size: 12px; margin-top: 8px; }
+    input[type="number"], select { width: 180px; padding: 6px 8px; margin-top: 4px; border: 1px solid #d1d5db; border-radius: 6px; }
+    button { padding: 8px 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #111827; color: white; cursor: pointer; }
+    button.secondary { background: white; color: #111827; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color:#3730a3; font-size: 12px; margin-left: 8px;}
+    canvas { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .muted { color:#6b7280; }
+    .log { background: #0b1020; color: #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; padding: 8px; border-radius: 6px; height: 160px; overflow: auto; }
+    .grid { display:grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap:8px; }
+    .badge { padding: 2px 6px; border-radius: 6px; border:1px solid #e5e7eb; background:#f9fafb; font-size:12px; }
+    a.small { font-size: 12px; }
+    .section-title { display:flex; align-items:center; justify-content:space-between; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .legend { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dynamic Project States</h1>
+    <p>Proof-of-concept demo: (A) Cylindrical brickwork with direction & doping constraints; (B) Circular motion observed through a slot, as an open system (lens).</p>
+  </header>
+  <main>
+    <section class="card">
+      <div class="section-title">
+        <h2>A. Cylindrical Brickwork – Discrete Project State Dynamics <span class="pill">Toy model</span></h2>
+        <div class="legend">
+          <span class="badge">D0: standard</span>
+          <span class="badge">D1: fast-cure, next dir = same</span>
+          <span class="badge">D2: slow-cure, next dir = flip</span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <canvas id="brickCanvas" width="520" height="520"></canvas>
+        </div>
+        <div class="col">
+          <h3>Parameters</h3>
+          <label>Number of courses (N) <input id="N" type="number" value="8" min="1" max="40"></label>
+          <label>Bricks per course (visual only) <input id="B" type="number" value="48" min="6" max="180"></label>
+          <label>Base curing steps per course <input id="baseCure" type="number" value="1" min="0" max="10"></label>
+          <label>Slow-cure extra steps (D2) <input id="slowExtra" type="number" value="1" min="0" max="10"></label>
+          <label>Animation speed (ms per brick) <input id="msPerBrick" type="number" value="20" min="1" max="200"></label>
+          <div style="margin-top:8px;">
+            <button id="randomize">Randomize doping</button>
+            <button id="enumerate" class="secondary">Enumerate feasible trajectories</button>
+            <button id="animate">Build one feasible trajectory</button>
+          </div>
+          <p class="muted">Rules: Each course has a direction (CW/CCW) and a doping level D∈{0,1,2}. D1 removes cure delay but forces next direction to be the same. D2 adds extra cure delay and forces direction flip on the next course. D0: base cure delay; next direction free.</p>
+          <div id="dopingGrid" class="grid" style="margin-top:8px;"></div>
+          <h3>Trajectory log</h3>
+          <div id="trajLog" class="log"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <h2>B. Circular Motion Through a Slot – Open System as a Lens <span class="pill">Continuous model</span></h2>
+        <a class="small" href="#formal">Jump to formal lens definition ↓</a>
+      </div>
+      <div class="row">
+        <div class="col">
+          <canvas id="circleCanvas" width="520" height="520"></canvas>
+        </div>
+        <div class="col">
+          <h3>Inputs (I)</h3>
+          <label>Radius r <input id="r" type="number" value="200" min="20" max="240"></label>
+          <label>Initial angle θ₀ (deg) <input id="theta0" type="number" value="0" min="0" max="359"></label>
+          <label>Angular speed ω (deg/s) <input id="omega" type="number" value="60" min="-720" max="720"></label>
+          <label>Slot center φ (deg) <input id="phi" type="number" value="90" min="0" max="359"></label>
+          <label>Slot half-width Δ (deg) <input id="delta" type="number" value="20" min="1" max="180"></label>
+          <label>Simulation duration T (s) <input id="T" type="number" value="8" min="1" max="120"></label>
+          <div style="margin-top:8px;">
+            <button id="runCircle">Run</button>
+            <button id="resetCircle" class="secondary">Reset</button>
+          </div>
+          <h3>Output (O)</h3>
+          <div class="log" id="circleLog"></div>
+        </div>
+      </div>
+      <p class="muted">Output stream is the list of (t, θ(t)) while θ(t) is within the slot [φ-Δ, φ+Δ] modulo 360°. Outside that arc the output is ⊥ (null).</p>
+    </section>
+
+    <section class="card" id="formal">
+      <h2>Formal Lens for the Circular Slot System</h2>
+      <p>
+        Let the closed dynamics live on the state manifold X = S¹ × ℝ with state x=(θ, ω) and vector field 
+        v(x) = (ω, 0). Fix parameters p=(r, φ, Δ). Let the input arena be I = (X, TₓX) and the output arena be 
+        O = (Y, T*ᵧY) where Y = S¹ ⊔ {⊥} (angle or null). The observation hₚ : X → Y is
+        hₚ(θ, ω) = θ if θ ∈ [φ-Δ, φ+Δ] (mod 2π), else ⊥.
+      </p>
+      <p>
+        In the <em>Myers lens</em> convention, a lens L : I ⇝ O is a pair (get, put) with 
+        get : X → Y and put : X × T*ᵧY → T*ₓX. We take get = hₚ and define put(x, η) = J_h(x)ᵗ · η, 
+        i.e., the pullback on cotangents (reverse-mode) of h at x (zero outside the slot, identity on the θ-component inside).
+      </p>
+      <p class="muted">
+        Intuition: the forward map <span class="mono">get</span> exposes the angle only when visible; the backward map 
+        <span class="mono">put</span> pulls back sensitivities on outputs to the state tangent—zeroed out during blackout.
+      </p>
+      <svg width="820" height="160">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" fill="#111827" />
+          </marker>
+        </defs>
+        <!-- Wires -->
+        <line x1="20" y1="40" x2="180" y2="40" stroke="#111827" stroke-width="2" marker-end="url(#arrow)"/>
+        <text x="22" y="30" font-size="12">θ₀, ω</text>
+        <rect x="180" y="10" width="160" height="60" rx="8" fill="#eef2ff" stroke="#c7d2fe"/>
+        <text x="190" y="45" font-size="13">Circle dynamics: ẋ = v(x)</text>
+        <line x1="340" y1="40" x2="500" y2="40" stroke="#111827" stroke-width="2" marker-end="url(#arrow)"/>
+        <rect x="500" y="10" width="160" height="60" rx="8" fill="#ecfeff" stroke="#a5f3fc"/>
+        <text x="510" y="32" font-size="13">Slot observer</text>
+        <text x="510" y="50" font-size="12">get = hₚ</text>
+        <line x1="660" y1="40" x2="800" y2="40" stroke="#111827" stroke-width="2" marker-end="url(#arrow)"/>
+        <text x="760" y="30" font-size="12">θ or ⊥</text>
+
+        <!-- Backward leg -->
+        <line x1="800" y1="120" x2="660" y2="120" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+        <text x="740" y="135" font-size="12" fill="#6b7280">η ∈ TᵧY</text>
+        <rect x="500" y="90" width="160" height="60" rx="8" fill="#ecfeff" stroke="#a5f3fc"/>
+        <text x="510" y="120" font-size="12" fill="#374151">put(x,η)=Jₕ(x)ᵗη</text>
+        <line x1="500" y1="120" x2="340" y2="120" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+        <rect x="180" y="90" width="160" height="60" rx="8" fill="#eef2ff" stroke="#c7d2fe"/>
+        <text x="190" y="120" font-size="12" fill="#374151">Update to T*ₓX</text>
+        <line x1="180" y1="120" x2="20" y2="120" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+        <text x="22" y="135" font-size="12" fill="#6b7280">cotangent feedback</text>
+      </svg>
+    </section>
+
+    <section class="card">
+      <h2>Pseudocode – Project State Dynamics</h2>
+<pre class="log" style="white-space: pre-wrap; height:auto;">
+state = (k, dir, cooldown)  // k: current course index, dir ∈ {CW, CCW}, cooldown ∈ ℕ
+rules:
+  D0: cooldown_next = base
+      dir_free
+  D1: cooldown_next = 0
+      dir_{k+1} = dir_k        // same direction required
+  D2: cooldown_next = base + slow_extra
+      dir_{k+1} = flip(dir_k)  // forced flip
+
+transition(state):
+  if cooldown > 0:
+    return (k, dir, cooldown - 1)
+  else:
+    choose dir_k ∈ allowed(k, dir)
+    build course k with direction dir_k
+    return (k + 1, dir_k, cooldown_next(D_k))
+
+terminal when k > N
+</pre>
+      <p class="muted">This discrete system defines a vector field on a finite state set; its integral curves are the build trajectories.</p>
+    </section>
+
+    <footer style="text-align:center; color:#6b7280; padding: 12px;">v0.1 – local HTML/JS, no external libraries.</footer>
+  </main>
+
+<script>
+/* ============ Utility ============ */
+function lerp(a,b,t){ return a + (b-a)*t; }
+function mod(a, n) { return ((a % n) + n) % n; }
+function deg2rad(x){ return x * Math.PI/180; }
+function rad2deg(x){ return x * 180/Math.PI; }
+
+/* ============ A. Cylindrical Brickwork ============ */
+const brickCanvas = document.getElementById('brickCanvas');
+const bctx = brickCanvas.getContext('2d');
+
+function drawRings(state){
+  const {N, B, doping, built, inCooldown, lastDir} = state;
+  const cx = brickCanvas.width/2, cy = brickCanvas.height/2;
+  bctx.clearRect(0,0,brickCanvas.width, brickCanvas.height);
+  // draw base circle & rings
+  const maxR = Math.min(cx,cy) - 10;
+  const ringW = maxR / (N + 1);
+  for(let i=0;i<N;i++){
+    const rOuter = maxR - i*ringW;
+    const rInner = rOuter - ringW + 3;
+    // fill background
+    bctx.beginPath();
+    bctx.arc(cx,cy,rOuter,0,2*Math.PI);
+    bctx.arc(cx,cy,rInner,0,2*Math.PI,true);
+    const d = doping[i];
+    const col = d===0 ? '#e5e7eb' : (d===1 ? '#dcfce7' : '#fee2e2'); // grey, green, red
+    bctx.fillStyle = col;
+    bctx.fill();
+    bctx.closePath();
+
+    // draw bricks if built[i] > 0
+    const bricksBuilt = built[i] || 0;
+    const dir = lastDir[i] || 1;
+    for(let j=0;j<bricksBuilt;j++){
+      const t = j / B;
+      const ang = -Math.PI/2 + (dir>0?1:-1)*t*2*Math.PI; // start at top
+      const nextAng = -Math.PI/2 + (dir>0?1:-1)*((j+1)/B)*2*Math.PI;
+      bctx.beginPath();
+      bctx.arc(cx,cy,rOuter-2,ang,nextAng,false);
+      bctx.arc(cx,cy,rInner+2,nextAng,ang,true);
+      bctx.closePath();
+      bctx.fillStyle = '#111827';
+      bctx.globalAlpha = 0.8;
+      bctx.fill();
+      bctx.globalAlpha = 1.0;
+    }
+
+    // outline & labels
+    bctx.strokeStyle = '#111827';
+    bctx.lineWidth = 1;
+    bctx.beginPath();
+    bctx.arc(cx,cy,rOuter,0,2*Math.PI);
+    bctx.arc(cx,cy,rInner,0,2*Math.PI,true);
+    bctx.stroke();
+    bctx.closePath();
+
+    // course label
+    bctx.fillStyle = '#111827';
+    bctx.font = '12px system-ui, sans-serif';
+    bctx.fillText(`Course ${i+1} (D${d})`, 8, 18 + i*14);
+  }
+
+  // cooldown banner
+  const cool = inCooldown;
+  if (cool > 0){
+    bctx.fillStyle = 'rgba(255, 196, 0, 0.15)';
+    bctx.fillRect(10, brickCanvas.height - 36, brickCanvas.width-20, 26);
+    bctx.fillStyle = '#92400e';
+    bctx.font = '14px system-ui, sans-serif';
+    bctx.fillText(`Curing... ${cool} step(s) remaining`, 20, brickCanvas.height - 18);
+  }
+}
+
+function initDopingGrid(N){
+  const grid = document.getElementById('dopingGrid');
+  grid.innerHTML = '';
+  for(let i=0;i<N;i++){
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="0">D0</option><option value="1">D1</option><option value="2">D2</option>';
+    sel.value = (i%3===0?2: (i%3===1?1:0));
+    sel.dataset.index = i;
+    sel.onchange = ()=>{};
+    const wrap = document.createElement('div');
+    wrap.className = 'badge';
+    wrap.appendChild(document.createTextNode(`Course ${i+1}: `));
+    wrap.appendChild(sel);
+    grid.appendChild(wrap);
+  }
+}
+
+function readDoping(){
+  const grid = document.getElementById('dopingGrid');
+  const sels = Array.from(grid.querySelectorAll('select'));
+  return sels.map(s => parseInt(s.value,10));
+}
+
+function logTraj(msg){
+  const el = document.getElementById('trajLog');
+  el.textContent += msg + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+
+function enumerateTrajectories(N, base, slowExtra, doping, limit=2000){
+  // states: (k, dir) with cooldown implicit from previous course's doping
+  // We will simulate cooldown by skipping choices when cooldown>0.
+  const res = [];
+  function allowedNextDir(prevDir, d){
+    if (d===1) return [prevDir];         // D1: same
+    if (d===2) return [prevDir * -1];    // D2: flip
+    return [-1, +1];                     // D0: free
+  }
+  function cooldownFor(d){
+    if (d===1) return 0;                 // fast
+    if (d===2) return base + slowExtra;  // slow
+    return base;                         // standard
+  }
+  function backtrack(k, prevDir, story){
+    if (res.length >= limit) return;
+    if (k > N) { res.push(story.slice()); return; }
+    const dprev = (k===1 ? 0 : doping[k-2]); // doping of previous course (k-1)
+    const cool = (k===1 ? 0 : cooldownFor(dprev));
+    if (cool > 0){
+      // occupy cooldown steps (record them but they don't consume courses)
+      story.push({type:'cooldown', steps: cool, at: k-1});
+      // after cooldown, proceed
+    }
+    const dirs = allowedNextDir(prevDir, dprev);
+    for (const dir of dirs){
+      story.push({type:'build', course:k, dir, doping: doping[k-1]});
+      backtrack(k+1, dir, story);
+      story.pop();
+    }
+    if (cool > 0) story.pop(); // remove cooldown record
+  }
+  backtrack(1, +1, []); // assume initial previous dir is CW (+1)
+  return res;
+}
+
+// Animation / build one feasible trajectory
+let animHandle = null;
+function animateOne(){
+  const N = parseInt(document.getElementById('N').value,10);
+  const B = parseInt(document.getElementById('B').value,10);
+  const base = parseInt(document.getElementById('baseCure').value,10);
+  const slowExtra = parseInt(document.getElementById('slowExtra').value,10);
+  const msPerBrick = parseInt(document.getElementById('msPerBrick').value,10);
+  const doping = readDoping();
+
+  const trajs = enumerateTrajectories(N, base, slowExtra, doping, 1);
+  const traj = trajs[0] || [];
+
+  const built = Array(N).fill(0);
+  const lastDir = Array(N).fill(1);
+  let cooldown = 0;
+  let i = 0;
+  let j = 0;
+
+  const state = {N, B, doping, built, inCooldown: 0, lastDir};
+
+  function step(){
+    if (i >= traj.length){
+      drawRings(state);
+      logTraj("Done.");
+      return;
+    }
+    const ev = traj[i];
+    if (ev.type === 'cooldown'){
+      cooldown = ev.steps;
+      state.inCooldown = cooldown;
+      drawRings(state);
+      logTraj(`Cooldown for course ${ev.at} – waiting ${cooldown} step(s)`);
+      i++;
+      setTimeout(step, 350);
+      return;
+    }
+    if (ev.type === 'build'){
+      const idx = ev.course - 1;
+      state.inCooldown = 0;
+      state.lastDir[idx] = ev.dir;
+      if (j < B){
+        state.built[idx] = j+1;
+        drawRings(state);
+        j++;
+        animHandle = setTimeout(step, msPerBrick);
+        return;
+      } else {
+        j = 0;
+        logTraj(`Built course ${ev.course} (${ev.dir>0?'CW':'CCW'}), doping D${ev.doping}`);
+        i++;
+        animHandle = setTimeout(step, 250);
+        return;
+      }
+    }
+  }
+
+  document.getElementById('trajLog').textContent = '';
+  step();
+}
+
+function randomizeDoping(){
+  const N = parseInt(document.getElementById('N').value,10);
+  initDopingGrid(N);
+  // Randomize values
+  const grid = document.getElementById('dopingGrid');
+  grid.querySelectorAll('select').forEach(sel => {
+    const r = Math.random();
+    sel.value = (r<0.34?0:(r<0.67?1:2));
+  });
+  drawRings({N, B: parseInt(document.getElementById('B').value,10), doping: readDoping(), built:[], inCooldown:0, lastDir:[]});
+}
+
+function enumerateAndShow(){
+  const N = parseInt(document.getElementById('N').value,10);
+  const B = parseInt(document.getElementById('B').value,10);
+  const base = parseInt(document.getElementById('baseCure').value,10);
+  const slowExtra = parseInt(document.getElementById('slowExtra').value,10);
+  const doping = readDoping();
+  const trajs = enumerateTrajectories(N, base, slowExtra, doping, 200);
+  const el = document.getElementById('trajLog');
+  el.textContent = `Found ${trajs.length} feasible trajectories (showing up to 10):\n`;
+  for (let i=0;i<Math.min(10, trajs.length); i++){
+    const story = trajs[i];
+    const parts = [];
+    for (const ev of story){
+      if (ev.type==='cooldown') parts.push(`[wait ×${ev.steps}]`);
+      if (ev.type==='build') parts.push(`${ev.course}${ev.dir>0?'↻':'↺'}`);
+    }
+    el.textContent += `#${i+1}: ${parts.join(' ')}\n`;
+  }
+  el.scrollTop = el.scrollHeight;
+}
+
+function setupA(){
+  const N = parseInt(document.getElementById('N').value,10);
+  initDopingGrid(N);
+  drawRings({N, B: parseInt(document.getElementById('B').value,10), doping: readDoping(), built:[], inCooldown:0, lastDir:[]});
+  document.getElementById('randomize').onclick = randomizeDoping;
+  document.getElementById('enumerate').onclick = enumerateAndShow;
+  document.getElementById('animate').onclick = animateOne;
+  document.getElementById('N').onchange = ()=>{ initDopingGrid(parseInt(document.getElementById('N').value,10)); drawRings({N: parseInt(document.getElementById('N').value,10), B: parseInt(document.getElementById('B').value,10), doping: readDoping(), built:[], inCooldown:0, lastDir:[]});};
+  document.getElementById('B').onchange = ()=>{ drawRings({N: parseInt(document.getElementById('N').value,10), B: parseInt(document.getElementById('B').value,10), doping: readDoping(), built:[], inCooldown:0, lastDir:[]});};
+}
+/* ============ B. Circle Slot Lens ============ */
+const circleCanvas = document.getElementById('circleCanvas');
+const cctx = circleCanvas.getContext('2d');
+
+let circleAnim = null;
+
+function drawCircleFrame(params, thetaDeg){
+  const {r, phi, delta} = params;
+  const cx = circleCanvas.width/2, cy = circleCanvas.height/2;
+  cctx.clearRect(0,0,circleCanvas.width, circleCanvas.height);
+
+  // Circle
+  cctx.beginPath();
+  cctx.arc(cx, cy, r, 0, 2*Math.PI);
+  cctx.strokeStyle = '#111827';
+  cctx.lineWidth = 2;
+  cctx.stroke();
+
+  // Slot arc
+  const start = deg2rad(phi - delta);
+  const end = deg2rad(phi + delta);
+  cctx.beginPath();
+  cctx.arc(cx, cy, r+6, start, end);
+  cctx.strokeStyle = '#0ea5e9';
+  cctx.lineWidth = 6;
+  cctx.stroke();
+
+  // Dot
+  const ang = deg2rad(thetaDeg);
+  const x = cx + r*Math.cos(ang);
+  const y = cy + r*Math.sin(ang);
+  // visible?
+  let visible = false;
+  let a1 = mod(thetaDeg - (phi - delta), 360);
+  let a2 = mod((phi + delta) - (phi - delta), 360);
+  // Equivalent check: distance along circle from slot start
+  // We'll do coverage test using angular difference
+  const inSlot = mod(thetaDeg - (phi - delta), 360) <= (2*delta);
+  visible = inSlot;
+
+  cctx.beginPath();
+  cctx.arc(x, y, 6, 0, 2*Math.PI);
+  cctx.fillStyle = visible ? '#16a34a' : '#6b7280';
+  cctx.fill();
+
+  // Indicator lines
+  cctx.beginPath();
+  cctx.moveTo(cx, cy);
+  cctx.lineTo(x, y);
+  cctx.strokeStyle = '#e5e7eb';
+  cctx.lineWidth = 1;
+  cctx.stroke();
+}
+
+function runCircle(){
+  const r = parseFloat(document.getElementById('r').value);
+  const theta0 = parseFloat(document.getElementById('theta0').value);
+  const omega = parseFloat(document.getElementById('omega').value);
+  const phi = parseFloat(document.getElementById('phi').value);
+  const delta = parseFloat(document.getElementById('delta').value);
+  const T = parseFloat(document.getElementById('T').value);
+  const params = {r, phi, delta};
+
+  const log = document.getElementById('circleLog');
+  log.textContent = '';
+
+  const dt = 1/60; // seconds
+  let t = 0;
+  function visible(theta){
+    return mod(theta - (phi - delta), 360) <= (2*delta);
+  }
+  function step(){
+    const theta = mod(theta0 + omega*t, 360);
+    drawCircleFrame(params, theta);
+    if (visible(theta)){
+      log.textContent += `t=${t.toFixed(2)}s, θ=${theta.toFixed(1)}°\n`;
+      log.scrollTop = log.scrollHeight;
+    }
+    t += dt;
+    if (t <= T) circleAnim = requestAnimationFrame(step);
+  }
+  if (circleAnim) cancelAnimationFrame(circleAnim);
+  step();
+}
+
+function resetCircle(){
+  if (circleAnim) cancelAnimationFrame(circleAnim);
+  const r = parseFloat(document.getElementById('r').value);
+  const theta0 = parseFloat(document.getElementById('theta0').value);
+  const phi = parseFloat(document.getElementById('phi').value);
+  const delta = parseFloat(document.getElementById('delta').value);
+  drawCircleFrame({r, phi, delta}, theta0);
+  document.getElementById('circleLog').textContent = '';
+}
+
+function setupB(){
+  document.getElementById('runCircle').onclick = runCircle;
+  document.getElementById('resetCircle').onclick = resetCircle;
+  resetCircle();
+}
+
+window.addEventListener('load', ()=>{
+  setupA();
+  setupB();
+});
+</script>
+</body>
+</html>
