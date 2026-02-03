@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offshore‑Wind Maintenance Lens (Hornsea Two demo)</title>
+  <style>
+    :root{
+      --bg: #0b0f14;
+      --panel: #111827;
+      --panel2: #0f172a;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --faint: rgba(148,163,184,0.16);
+      --accent: #38bdf8;
+      --good: #34d399;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      --radius: 14px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --panel2: #f1f5f9;
+        --text: #0b1220;
+        --muted: #475569;
+        --faint: rgba(71,85,105,0.12);
+        --shadow: 0 10px 25px rgba(2,6,23,.10);
+      }
+    }
+
+    *{ box-sizing: border-box; }
+    html,body{ height: 100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      background: radial-gradient(1200px 800px at 20% -10%, rgba(56,189,248,.16), transparent 55%),
+                  radial-gradient(1200px 800px at 90% 0%, rgba(52,211,153,.12), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    header{
+      padding: 18px 18px 10px;
+      position: sticky;
+      top:0;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
+    }
+
+    .titleRow{
+      display:flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    h1{
+      font-size: 1.05rem;
+      margin:0;
+      letter-spacing: .2px;
+    }
+
+    .sub{
+      margin-top: 4px;
+      font-size: .92rem;
+      color: var(--muted);
+      max-width: 72ch;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--muted) 24%, transparent);
+      background: color-mix(in srgb, var(--panel) 85%, transparent);
+      box-shadow: 0 6px 18px rgba(0,0,0,.10);
+      font-size: .85rem;
+      color: var(--muted);
+    }
+
+    .levelGroup{
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      flex-wrap: wrap;
+    }
+
+    .segmented{
+      display:inline-flex;
+      padding: 4px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--panel) 80%, transparent);
+      border: 1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+    }
+
+    .segmented button{
+      appearance:none;
+      border:0;
+      background: transparent;
+      color: var(--muted);
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: .86rem;
+      cursor:pointer;
+    }
+
+    .segmented button[aria-pressed="true"]{
+      background: color-mix(in srgb, var(--accent) 22%, transparent);
+      color: var(--text);
+      outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    .container{
+      padding: 14px 18px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    nav{
+      margin-top: 12px;
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+
+    .tabBtn{
+      appearance:none;
+      border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      background: color-mix(in srgb, var(--panel) 80%, transparent);
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-size: .86rem;
+    }
+
+    .tabBtn[aria-selected="true"]{
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      color: var(--text);
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap: 14px;
+      margin-top: 14px;
+      align-items:start;
+    }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), color-mix(in srgb, var(--panel2) 92%, transparent));
+      border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+
+    .panel h2{
+      font-size: .92rem;
+      margin: 0 0 10px;
+      letter-spacing: .2px;
+    }
+
+    .panel h3{
+      font-size: .9rem;
+      margin: 12px 0 8px;
+      color: color-mix(in srgb, var(--text) 88%, var(--muted));
+    }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    label{
+      display:block;
+      font-size: .82rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    input[type="number"], input[type="text"], input[type="datetime-local"], select, textarea{
+      width: 100%;
+      padding: 8px 9px;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      background: color-mix(in srgb, var(--bg) 70%, transparent);
+      color: var(--text);
+      outline: none;
+    }
+
+    input[type="number"]{ font-family: var(--mono); }
+
+    textarea{ min-height: 84px; resize: vertical; }
+
+    .field{ flex: 1 1 120px; min-width: 120px; }
+    .field.small{ flex: 0 0 120px; }
+
+    .btn{
+      appearance:none;
+      border: 1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      background: color-mix(in srgb, var(--panel) 82%, transparent);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-size: .88rem;
+    }
+    .btn.primary{
+      border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+      background: color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+    .btn.danger{
+      border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+      background: color-mix(in srgb, var(--bad) 16%, transparent);
+    }
+    .btn:disabled{ opacity: .55; cursor: not-allowed; }
+
+    .mini{
+      font-size: .82rem;
+      color: var(--muted);
+    }
+
+    .kpiRow{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+    }
+    @media (max-width: 640px){
+      .kpiRow{ grid-template-columns: 1fr; }
+    }
+
+    .kpi{
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
+      background: color-mix(in srgb, var(--panel) 80%, transparent);
+    }
+    .kpi .num{ font-family: var(--mono); font-size: 1.1rem; }
+    .kpi .lbl{ font-size: .82rem; color: var(--muted); }
+
+    table{
+      width:100%;
+      border-collapse: collapse;
+      font-size: .86rem;
+    }
+    th, td{
+      border-bottom: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
+      padding: 8px 6px;
+      vertical-align: top;
+    }
+    th{ text-align:left; color: var(--muted); font-weight: 600; }
+
+    .tag{
+      display:inline-flex;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: .78rem;
+      border: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
+      color: var(--muted);
+      background: color-mix(in srgb, var(--panel) 82%, transparent);
+      white-space: nowrap;
+    }
+
+    .tag.good{ border-color: color-mix(in srgb, var(--good) 55%, transparent); color: color-mix(in srgb, var(--good) 92%, white); background: color-mix(in srgb, var(--good) 16%, transparent); }
+    .tag.bad{ border-color: color-mix(in srgb, var(--bad) 55%, transparent); color: color-mix(in srgb, var(--bad) 92%, white); background: color-mix(in srgb, var(--bad) 16%, transparent); }
+    .tag.warn{ border-color: color-mix(in srgb, var(--warn) 55%, transparent); color: color-mix(in srgb, var(--warn) 92%, black); background: color-mix(in srgb, var(--warn) 18%, transparent); }
+
+    .mono{ font-family: var(--mono); }
+
+    details{
+      border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
+      border-radius: 12px;
+      padding: 10px;
+      background: color-mix(in srgb, var(--panel) 76%, transparent);
+    }
+    details summary{ cursor: pointer; color: var(--text); }
+
+    .hint{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--muted) 24%, transparent);
+      color: var(--muted);
+      font-size: .75rem;
+      margin-left: 6px;
+      user-select: none;
+    }
+
+    .callout{
+      border-left: 3px solid color-mix(in srgb, var(--accent) 70%, transparent);
+      padding: 10px 10px 10px 12px;
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      border-radius: 10px;
+      color: color-mix(in srgb, var(--text) 92%, var(--muted));
+      margin: 10px 0;
+    }
+
+    .canvasWrap{
+      width:100%;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
+      background: color-mix(in srgb, var(--bg) 55%, transparent);
+      overflow:hidden;
+    }
+
+    canvas{ display:block; width:100%; height: 250px; }
+    .canvasSmall canvas{ height: 190px; }
+
+    .legend{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    .swatch{
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      border: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
+      background: var(--muted);
+      display:inline-block;
+    }
+
+    .swatch.good{ background: var(--good); }
+    .swatch.accent{ background: var(--accent); }
+    .swatch.bad{ background: var(--bad); }
+
+    /* Competency filtering */
+    body[data-level="0"] .lvl1, body[data-level="0"] .lvl2{ display:none !important; }
+    body[data-level="1"] .lvl2{ display:none !important; }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      *{ scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
+
+    .hidden{ display:none !important; }
+    .hr{ height:1px; background: color-mix(in srgb, var(--muted) 18%, transparent); margin: 12px 0; }
+
+    .code{
+      font-family: var(--mono);
+      font-size: .82rem;
+      padding: 10px;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--bg) 70%, transparent);
+      border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
+      overflow:auto;
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      border: 1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      font-size: .9rem;
+      z-index: 99;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+    }
+    .toast.show{ opacity: 1; }
+
+    .footerNote{
+      margin-top: 18px;
+      font-size: .82rem;
+      color: var(--muted);
+    }
+
+  </style>
+</head>
+<body data-level="1">
+  <header>
+    <div class="titleRow">
+      <div>
+        <h1>Offshore‑Wind Maintenance Lens with “Doping” Constraints <span class="tag">Hornsea Two demo</span></h1>
+        <div class="sub">
+          Input = forecast sea‑state (significant wave height). Output = turbine‑visit <em>visibility</em> through a 3‑hour weather window.
+          This is a self‑contained toy model you can re‑wire and extend.
+        </div>
+      </div>
+      <div class="levelGroup">
+        <span class="pill" title="This changes the amount of explanation shown">Explainer level</span>
+        <div class="segmented" role="group" aria-label="Explainer level">
+          <button id="lvl0" aria-pressed="false" type="button">Intro</button>
+          <button id="lvl1" aria-pressed="true" type="button">Ops</button>
+          <button id="lvl2" aria-pressed="false" type="button">CT</button>
+        </div>
+      </div>
+    </div>
+
+    <nav aria-label="Sections">
+      <button class="tabBtn" id="tabDash" aria-selected="true" type="button">Dashboard</button>
+      <button class="tabBtn" id="tabLens" aria-selected="false" type="button">Lens & wiring</button>
+      <button class="tabBtn" id="tabData" aria-selected="false" type="button">Data & integration</button>
+      <button class="tabBtn" id="tabAbout" aria-selected="false" type="button">About / assumptions</button>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <!-- DASHBOARD TAB -->
+    <section id="panelDash">
+      <div class="grid">
+        <aside class="panel">
+          <h2>Inputs</h2>
+
+          <div class="callout lvl0">
+            <strong>What you do here:</strong> pick a weather scenario + an O&amp;M “blueprint” (tasks with allowed date ranges), then compute when each task becomes <em>visible</em> (a safe 3‑hour window).
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="weatherScenario">Sea‑state scenario</label>
+              <select id="weatherScenario">
+                <option value="calm">Synthetic calm</option>
+                <option value="moderate" selected>Synthetic moderate</option>
+                <option value="stormy">Synthetic stormy</option>
+              </select>
+            </div>
+            <div class="field small">
+              <label for="seed">Seed</label>
+              <input id="seed" type="number" value="42" min="0" step="1" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="startDate">Forecast start (UTC)</label>
+              <input id="startDate" type="datetime-local" />
+            </div>
+            <div class="field small">
+              <label for="days">Days</label>
+              <input id="days" type="number" value="45" min="2" max="90" step="1" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field small">
+              <label for="windowHrs">Window (hrs)</label>
+              <input id="windowHrs" type="number" value="3" min="1" max="12" step="1" />
+            </div>
+            <div class="field small">
+              <label for="stepHrs">Step (hrs)</label>
+              <input id="stepHrs" type="number" value="1" min="1" max="6" step="1" />
+            </div>
+            <div class="field">
+              <label for="policy">Scheduling policy</label>
+              <select id="policy">
+                <option value="fifo" selected>FIFO (planned order)</option>
+                <option value="opportunistic">Opportunistic (do any feasible now)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <button class="btn primary" id="runBtn" type="button">Run simulation</button>
+            <button class="btn" id="resetBtn" type="button">Reset preset</button>
+            <button class="btn" id="exportBtn" type="button">Export output JSON</button>
+          </div>
+
+          <div class="hr"></div>
+
+          <h3>Doping constraints</h3>
+          <div class="mini lvl0">Doping adds a discrete “materials/effort” label to each task that changes what transitions are allowed. Here it tweaks wave‑height limits + cooldown.</div>
+          <div class="mini lvl1">Interpretation for O&amp;M: higher doping = more delicate/heavy operations → stricter sea‑state threshold + longer setup/stand‑down.</div>
+
+          <table aria-label="Doping rules">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Meaning</th>
+                <th>Hs max (m)</th>
+                <th>Cooldown (h)</th>
+              </tr>
+            </thead>
+            <tbody id="dopingTable"></tbody>
+          </table>
+
+          <details class="lvl2" style="margin-top:10px">
+            <summary>CT note: doping as extra state dimension</summary>
+            <div class="mini">
+              In the manifold picture, “doping” extends the state space from <span class="mono">S</span> to <span class="mono">S×D×C</span>,
+              where <span class="mono">D</span> is a discrete label set (levels) and <span class="mono">C</span> is a cooldown/phase variable.
+              This makes the local tangent options (what you can do next) depend on the label.
+            </div>
+          </details>
+
+          <div class="hr"></div>
+
+          <h3>O&amp;M blueprint (editable)</h3>
+          <div class="mini">Each row is a task with an allowed interval. The model will pick a 3‑hour safe slot inside the interval.</div>
+          <div class="mini lvl1">Preset is based on a Hornsea Two “Notice to Mariners” (non‑routine ops). Routine maintenance is typically not public in this format.</div>
+
+          <div class="row" style="margin: 10px 0 6px;">
+            <button class="btn" id="addTaskBtn" type="button">Add task</button>
+            <button class="btn" id="loadPresetBtn" type="button">Load Hornsea Two preset</button>
+          </div>
+
+          <div style="overflow:auto; max-height: 340px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);">
+            <table aria-label="Task blueprint">
+              <thead>
+                <tr>
+                  <th style="min-width:160px">Task</th>
+                  <th>Earliest start (UTC)</th>
+                  <th>Latest end (UTC)</th>
+                  <th>Doping</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="taskTable"></tbody>
+            </table>
+          </div>
+
+          <details class="lvl2" style="margin-top:10px">
+            <summary>CT note: blueprint as sheaf‑like constraint</summary>
+            <div class="mini">
+              Think of each task interval as a local condition on a time‑patch. A “completed schedule” is a choice of a specific 3‑hour slot
+              in each interval that is compatible with the global constraints (cooldown, single crew, etc.). In sheaf language, that’s a global
+              section satisfying gluing/compatibility.
+            </div>
+          </details>
+
+        </aside>
+
+        <section class="panel">
+          <h2>Outputs</h2>
+
+          <div class="kpiRow" aria-label="Key metrics">
+            <div class="kpi">
+              <div class="num" id="kpiFeasible">–</div>
+              <div class="lbl">Tasks scheduled within their allowed intervals</div>
+            </div>
+            <div class="kpi">
+              <div class="num" id="kpiAvgDelay">–</div>
+              <div class="lbl">Average delay from earliest start (hours)</div>
+            </div>
+            <div class="kpi">
+              <div class="num" id="kpiWeatherUtil">–</div>
+              <div class="lbl">Weather‑window utilisation (scheduled / available)</div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <h3>Sea‑state forecast (Hs)</h3>
+          <div class="mini">Line = wave height. Shading = feasible 3‑hour start times for the selected doping level. Markers = task windows.</div>
+
+          <div class="row" style="margin-bottom:8px;">
+            <div class="field small">
+              <label for="vizDoping">Visualise doping</label>
+              <select id="vizDoping">
+                <option value="0">0 (routine)</option>
+                <option value="1" selected>1 (medium)</option>
+                <option value="2">2 (heavy)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="zoom">Zoom (days shown)</label>
+              <input id="zoom" type="number" value="18" min="2" max="60" step="1" />
+            </div>
+            <div class="field">
+              <label for="scrollDay">Scroll start (day offset)</label>
+              <input id="scrollDay" type="number" value="0" min="0" max="80" step="1" />
+            </div>
+          </div>
+
+          <div class="canvasWrap">
+            <canvas id="waveCanvas" aria-label="Wave forecast chart"></canvas>
+          </div>
+          <div class="legend" aria-label="Legend">
+            <span><span class="swatch accent"></span> Hs (significant wave height)</span>
+            <span><span class="swatch good"></span> feasible 3‑hr start</span>
+            <span><span class="swatch bad"></span> task window</span>
+          </div>
+
+          <h3 style="margin-top:14px;">Schedule result</h3>
+          <div class="mini">For each task: earliest feasible 3‑hour slot inside its interval, given its doping constraints and the chosen policy.</div>
+
+          <div style="overflow:auto; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);">
+            <table aria-label="Schedule output">
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Status</th>
+                  <th>Chosen start (UTC)</th>
+                  <th>Delay (h)</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="outTable"></tbody>
+            </table>
+          </div>
+
+          <div class="hr"></div>
+
+          <h3>Progress trajectories</h3>
+          <div class="mini lvl0">This chart shows the “building going up”: cumulative tasks completed over time.</div>
+          <div class="mini lvl2">Interpretation: a discrete section of a tangent bundle selects, at each state, one feasible next action — a policy as a vector field.</div>
+
+          <div class="canvasWrap canvasSmall">
+            <canvas id="progressCanvas" aria-label="Progress chart"></canvas>
+          </div>
+          <div class="legend">
+            <span><span class="swatch bad"></span> FIFO policy</span>
+            <span><span class="swatch good"></span> Opportunistic policy</span>
+          </div>
+
+        </section>
+      </div>
+
+      <div class="footerNote">
+        Tip: Edit the doping thresholds and watch the feasible windows change. Then swap the policy to see alternate trajectories.
+      </div>
+    </section>
+
+    <!-- LENS TAB -->
+    <section id="panelLens" class="hidden">
+      <div class="grid">
+        <section class="panel">
+          <h2>Lens statement</h2>
+          <div class="callout lvl0">
+            <strong>Lens idea:</strong> we separate what the system <em>exposes</em> (output) from how it <em>updates</em> when fed inputs.
+            That lets us re‑wire parts (forecast source, constraints, policies) by composing lenses.
+          </div>
+
+          <div class="lvl1">
+            <h3>In plain operations language</h3>
+            <ul>
+              <li><span class="mono">State S</span> = where we are in the plan (time, which tasks are done, cooldown remaining).</li>
+              <li><span class="mono">Input I</span> = forecast sea‑state (Hs) over time at the site.</li>
+              <li><span class="mono">Output O</span> = “visibility”: whether a 3‑hour safe window exists (and when).</li>
+              <li><span class="mono">Update</span> = advance time and (optionally) commit to a task when a window opens.</li>
+            </ul>
+          </div>
+
+          <div class="lvl2">
+            <h3>Chosen formalism: Myers’ (Bun,T)-dynamical systems as generalized lenses</h3>
+            <p class="mini">
+              We use the notation of a <em>Bun‑lens</em> (a generalized lens defined from an indexed category <span class="mono">Bun</span>)
+              because it directly expresses an <em>open</em> dynamical system with “inputs valid at an orientation.”
+            </p>
+            <div class="code" aria-label="Lens equation">
+              (u / r) : (T S / S)  ⇆  (I / O)
+
+              r : S → O                          (readout / orientation)
+              u : r*I → T S                      (update / dynamics)
+            </div>
+            <p class="mini">
+              Here <span class="mono">r*I</span> is the pullback: “inputs valid at the current readout.”
+              In our case, the readout exposes a time &amp; location (which turbine / asset), and the input bundle provides the forecast sea‑state at that time/location.
+            </p>
+          </div>
+
+          <details class="lvl2" style="margin-top:10px">
+            <summary>Spivak alignment (deterministic systems as lenses)</summary>
+            <div class="mini">
+              In Spivak’s presentation, a (discrete) dynamical system with state <span class="mono">S</span> is a lens
+              with a readout map <span class="mono">S→A</span> and an update map <span class="mono">S×A'→S</span>.
+              This dashboard is exactly that shape: readout = visibility; update = advance/commit.
+            </div>
+          </details>
+
+        </section>
+
+        <section class="panel">
+          <h2>Wiring diagram</h2>
+          <div class="mini">A schematic wiring diagram (as a lens) for this demo. Boxes are lenses; wires carry typed values.</div>
+
+          <div class="canvasWrap" style="padding:10px;">
+            <svg id="wiringSvg" viewBox="0 0 940 360" width="100%" height="360" role="img" aria-label="Wiring diagram">
+              <defs>
+                <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="rgba(56,189,248,.22)" />
+                  <stop offset="1" stop-color="rgba(56,189,248,.06)" />
+                </linearGradient>
+                <linearGradient id="g2" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="rgba(52,211,153,.22)" />
+                  <stop offset="1" stop-color="rgba(52,211,153,.06)" />
+                </linearGradient>
+                <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                  <path d="M0,0 L10,4 L0,8 Z" fill="rgba(148,163,184,.85)" />
+                </marker>
+              </defs>
+
+              <!-- Boxes -->
+              <rect x="30" y="40" width="260" height="90" rx="16" fill="url(#g1)" stroke="rgba(148,163,184,.35)" />
+              <text x="48" y="72" fill="currentColor" font-size="16" font-family="var(--sans)">Forecast source</text>
+              <text x="48" y="96" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">Hs(t), wind(t), …</text>
+
+              <rect x="330" y="40" width="280" height="90" rx="16" fill="rgba(148,163,184,.06)" stroke="rgba(148,163,184,.30)" />
+              <text x="348" y="72" fill="currentColor" font-size="16" font-family="var(--sans)">3‑hour visibility lens</text>
+              <text x="348" y="96" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">Hs window → visible?</text>
+
+              <rect x="650" y="40" width="260" height="90" rx="16" fill="url(#g2)" stroke="rgba(148,163,184,.35)" />
+              <text x="668" y="72" fill="currentColor" font-size="16" font-family="var(--sans)">O&amp;M blueprint lens</text>
+              <text x="668" y="96" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">task intervals + doping</text>
+
+              <rect x="180" y="195" width="300" height="110" rx="16" fill="rgba(148,163,184,.06)" stroke="rgba(148,163,184,.30)" />
+              <text x="198" y="227" fill="currentColor" font-size="16" font-family="var(--sans)">Policy / vector field</text>
+              <text x="198" y="252" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">choose next action</text>
+              <text x="198" y="276" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--sans)">FIFO vs opportunistic</text>
+
+              <rect x="540" y="195" width="300" height="110" rx="16" fill="rgba(148,163,184,.06)" stroke="rgba(148,163,184,.30)" />
+              <text x="558" y="227" fill="currentColor" font-size="16" font-family="var(--sans)">State update</text>
+              <text x="558" y="252" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">S × I → S</text>
+              <text x="558" y="276" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--sans)">cooldown, completion</text>
+
+              <!-- Wires -->
+              <path d="M290 85 C310 85, 310 85, 330 85" fill="none" stroke="rgba(148,163,184,.7)" stroke-width="3" marker-end="url(#arrow)" />
+              <path d="M610 85 C630 85, 630 85, 650 85" fill="none" stroke="rgba(148,163,184,.7)" stroke-width="3" marker-end="url(#arrow)" />
+
+              <path d="M470 130 C470 160, 410 175, 330 195" fill="none" stroke="rgba(148,163,184,.55)" stroke-width="3" marker-end="url(#arrow)" />
+              <path d="M780 130 C780 160, 740 175, 690 195" fill="none" stroke="rgba(148,163,184,.55)" stroke-width="3" marker-end="url(#arrow)" />
+
+              <path d="M480 250 C510 250, 515 250, 540 250" fill="none" stroke="rgba(148,163,184,.7)" stroke-width="3" marker-end="url(#arrow)" />
+
+              <path d="M690 305 C690 330, 240 330, 240 305" fill="none" stroke="rgba(148,163,184,.45)" stroke-width="3" marker-end="url(#arrow)" />
+              <text x="420" y="342" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--mono)">state feedback (closed loop)</text>
+
+              <text x="32" y="26" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--sans)">typed wiring diagram (schematic)</text>
+            </svg>
+          </div>
+
+          <details class="lvl2" style="margin-top:10px">
+            <summary>Where “lens composition” shows up</summary>
+            <div class="mini">
+              If you swap the forecast source (e.g., from a Met Office wave model feed to an in‑house hindcast), that’s literally composing the
+              system with a lens that maps one interface (raw dataset) into another interface (Hs(t) at asset location). Same for adding a new constraint.
+            </div>
+          </details>
+
+        </section>
+      </div>
+    </section>
+
+    <!-- DATA TAB -->
+    <section id="panelData" class="hidden">
+      <div class="grid">
+        <section class="panel">
+          <h2>Data paths (Met Office + schedules)</h2>
+
+          <div class="callout">
+            <strong>Important:</strong> the legacy Met Office DataPoint API is retired. If you want Met Office data programmatically,
+            use newer channels like the Met Office Weather DataHub (for many atmos variables) or Met Office marine products / ASDI open data for wave/ocean NetCDF.
+          </div>
+
+          <h3>What this demo expects</h3>
+          <p class="mini">
+            For the lens here, the “input arena” is a time series <span class="mono">Hs(t)</span> on an hourly grid.
+            If you have wave NetCDF, you can convert it to JSON/CSV and paste/import.
+          </p>
+
+          <div class="row">
+            <div class="field">
+              <label for="importBox">Paste/import your own Hs time series</label>
+              <textarea id="importBox" placeholder='Format: JSON with {"startISO":"2025-06-08T00:00:00Z","stepHours":1,"hs":[1.2,1.1,...]}'></textarea>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="importBtn" type="button">Use pasted data</button>
+            <button class="btn" id="copyTemplateBtn" type="button">Copy template</button>
+            <button class="btn" id="copyPythonBtn" type="button">Copy NetCDF→JSON helper (Python)</button>
+          </div>
+
+          <details style="margin-top:12px">
+            <summary>Python helper snippet (xarray) — converts NetCDF to this demo format</summary>
+            <div class="code" id="pySnippet"></div>
+          </details>
+
+          <details class="lvl2" style="margin-top:12px">
+            <summary>Why bundle‑over‑orientation matters for real data</summary>
+            <div class="mini">
+              In Myers’ setup, inputs live in a bundle <span class="mono">I → O</span>. Here <span class="mono">O</span> can be
+              (asset_id, time) and the fiber <span class="mono">I(o)</span> contains just the forecast values valid at that (asset,time).
+              This avoids pretending “the input is one global thing” when it is really indexed by context.
+            </div>
+          </details>
+
+        </section>
+
+        <section class="panel">
+          <h2>Schedule ingestion notes</h2>
+          <p class="mini">
+            The preset “Hornsea Two” tasks are taken from a Notice to Mariners (non‑routine operations). These notices often give:
+            a start date, an estimated duration (or end date), safety zone notes, and sometimes coordinates.
+          </p>
+
+          <details open>
+            <summary>Suggested next step if you want richer schedules</summary>
+            <div class="mini">
+              Build a proper “blueprint schema” (tasks, assets, resource pools, constraints) and treat each data feed as a lens into that schema.
+              For example, a CMMS export, vessel availability, and weather nowcasts each become composable components.
+            </div>
+          </details>
+
+          <details class="lvl2" style="margin-top:12px">
+            <summary>From blueprint to state manifold</summary>
+            <div class="mini">
+              A project state can be represented as a partially‑filled blueprint (which tasks are completed/in‑progress, remaining cooldowns).
+              Feasible next moves form the “tangent set” at that state; a policy selects one move, i.e. a section (vector field) over the state space.
+            </div>
+          </details>
+
+          <div class="hr"></div>
+
+          <h3>Export format</h3>
+          <p class="mini">The “Export output JSON” button writes:</p>
+          <div class="code mono" id="exportSchema"></div>
+
+        </section>
+      </div>
+    </section>
+
+    <!-- ABOUT TAB -->
+    <section id="panelAbout" class="hidden">
+      <div class="grid">
+        <section class="panel">
+          <h2>Assumptions & caveats</h2>
+          <ul class="mini">
+            <li>This is a toy model for concept validation, not an operational safety tool.</li>
+            <li>Weather here is synthetic unless you paste real data.</li>
+            <li>Sea‑state constraint is simplified to a single threshold on significant wave height Hs.</li>
+            <li>Tasks are simplified to “needs one 3‑hour visit sometime inside an allowed interval.”</li>
+            <li>Single crew/vessel is assumed via a cooldown after each task.</li>
+          </ul>
+
+          <details class="lvl2" style="margin-top:12px">
+            <summary>Extending to a richer open system</summary>
+            <div class="mini">
+              Add inputs: wind gusts, visibility, daylight, vessel class, crew limits. Add outputs: cost, risk, expected downtime.
+              Then change the doctrine from deterministic to monadic (stochastic) to represent uncertainty, as in Myers’ discussion of monadic doctrines.
+            </div>
+          </details>
+
+        </section>
+
+        <section class="panel">
+          <h2>What’s “visibility through a 3‑hour window”?</h2>
+          <div class="callout lvl0">
+            Imagine a sliding 3‑hour slot over the forecast. When the sea state stays under your limit for the whole slot, the task is “visible” / feasible.
+          </div>
+
+          <div class="mini lvl1">
+            Practically: crew transfer or a delicate lift can require sustained conditions, not just a momentary lull.
+            This lens computes all start times where the next 3 hours meet the limit.
+          </div>
+
+          <details class="lvl2" style="margin-top:12px">
+            <summary>Formal output type</summary>
+            <div class="mini">
+              For a discrete hourly grid, the output can be represented as a Boolean time series
+              <span class="mono">V : {0…N-1} → {0,1}</span>, where <span class="mono">V(t)=1</span>
+              iff <span class="mono">max(Hs[t…t+2]) ≤ Hs_max</span>.
+              More generally, output is a set of feasible intervals.
+            </div>
+          </details>
+
+          <div class="hr"></div>
+
+          <h3>Quick glossary</h3>
+          <ul class="mini">
+            <li><strong>Hs</strong>: significant wave height (meters).</li>
+            <li><strong>Lens</strong>: a pair of maps organising “expose” and “update”.</li>
+            <li><strong>Open dynamical system</strong>: has internal state and an interface (inputs/outputs) to its environment.</li>
+            <li><strong>Doping</strong> (here): a discrete constraint level that changes allowable transitions.</li>
+          </ul>
+
+          <details open style="margin-top:12px">
+            <summary>Sources used for the demo preset (links)</summary>
+            <div class="mini">
+              <ul>
+                <li>Hornsea Two wind farm headline facts (turbine count, rating, location): Siemens Gamesa press release (2018) — <a href="https://www.siemensgamesa.com/global/en/home/press-releases/siemens-gamesa-news-offshore-hornsea-two-oersted.html" target="_blank" rel="noopener">link</a></li>
+                <li>Hornsea Two non‑routine O&amp;M activities (blade replacement, cable repair, drone ops): Hornsea Two Notice to Mariners (June 2025) — <a href="https://www.eastern-ifca.gov.uk/wp-content/uploads/2025/06/ISSUED-June-2025-Orsted-Regional-NtM-Issue-06.pdf" target="_blank" rel="noopener">link</a></li>
+                <li>Met Office DataPoint retirement notice: <a href="https://www.metoffice.gov.uk/services/data/datapoint" target="_blank" rel="noopener">link</a></li>
+                <li>Met Office marine wave data products (AMM15 WAV) via UKMCAS FTP/SFTP: <a href="https://www.metoffice.gov.uk/services/data/met-office-marine-data-service" target="_blank" rel="noopener">link</a></li>
+                <li>Met Office NWS Wave model open data (AWS/ASDI listing): <a href="https://registry.opendata.aws/met-office-nws-wave-model/" target="_blank" rel="noopener">link</a></li>
+                <li>AMM15 wave product sheet (file format / naming): <a href="https://www.metoffice.gov.uk/binaries/content/assets/metofficegovuk/pdf/data/amm15-wave-data-product-sheet.pdf" target="_blank" rel="noopener">link</a></li>
+              </ul>
+              Lens theory framing follows Spivak (lenses) and Myers ((Bun,T)-dynamical systems).
+            </div>
+          </details>
+
+        </section>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  (function(){
+    "use strict";
+
+    // ------------------------------
+    // Utilities
+    // ------------------------------
+    const HOUR_MS = 3600 * 1000;
+
+    function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
+
+    function seededRng(seed){
+      let x = (seed >>> 0) || 1;
+      return function(){
+        x = (1664525 * x + 1013904223) >>> 0;
+        return x / 4294967296;
+      }
+    }
+
+    function fmtIso(ms){
+      // ISO without seconds for compactness
+      return new Date(ms).toISOString().replace('.000Z','Z');
+    }
+
+    function toDatetimeLocalUTC(ms){
+      // datetime-local expects YYYY-MM-DDTHH:mm (no timezone). We use UTC values.
+      const d = new Date(ms);
+      const pad = (n)=>String(n).padStart(2,'0');
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    }
+
+    function fromDatetimeLocalUTC(str){
+      // Interpret datetime-local string as UTC.
+      // str like '2025-06-08T00:00'
+      if(!str) return NaN;
+      const [date, time] = str.split('T');
+      if(!date || !time) return NaN;
+      const [Y,M,D] = date.split('-').map(Number);
+      const [h,m] = time.split(':').map(Number);
+      return Date.UTC(Y, (M||1)-1, D||1, h||0, m||0, 0, 0);
+    }
+
+    function lowerBoundByT(arr, t){
+      let lo = 0, hi = arr.length;
+      while(lo < hi){
+        const mid = (lo + hi) >> 1;
+        if(arr[mid].t < t) lo = mid + 1; else hi = mid;
+      }
+      return lo;
+    }
+
+    function toast(msg){
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(()=>el.classList.remove('show'), 1800);
+    }
+
+    function copyToClipboard(text){
+      navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard')).catch(()=>toast('Copy failed'));
+    }
+
+    // ------------------------------
+    // Data presets
+    // ------------------------------
+
+    const PRESET_TASKS_H2 = [
+      {
+        id: 'h2_h37_blade',
+        name: 'Blade replacement — WTG H37',
+        earliestStartISO: '2025-06-09T00:00:00Z',
+        latestEndISO: '2025-06-11T00:00:00Z',
+        doping: 2,
+        location: { lat: 53.907425, lon: 1.468515, label: 'WTG H37 (approx)' },
+        notes: 'NtM: start 09/06/2025, duration 2 days; safety zone ~500m; coords ≈ 53°54′26.729″N, 1°28′6.654″E.'
+      },
+      {
+        id: 'h2_cargo_drone',
+        name: 'Cargo drone operations (campaign)',
+        earliestStartISO: '2025-06-12T00:00:00Z',
+        latestEndISO: '2025-07-17T00:00:00Z',
+        doping: 0,
+        notes: 'NtM: start 12/06/2025, duration 5 weeks.'
+      },
+      {
+        id: 'h2_bmu2_export',
+        name: 'BMU2 export cable repair',
+        earliestStartISO: '2025-06-14T00:00:00Z',
+        latestEndISO: '2025-07-01T00:00:00Z',
+        doping: 1,
+        notes: 'NtM: start 14/06/2025; est completion 01/07/2025 (weather dependent).' 
+      }
+    ];
+
+    const DEFAULT_DOPING_RULES = {
+      0: { label: 'Routine / low-risk', hsMax: 1.6, cooldownHours: 2 },
+      1: { label: 'Medium / constrained', hsMax: 1.3, cooldownHours: 4 },
+      2: { label: 'Heavy / delicate', hsMax: 1.1, cooldownHours: 8 },
+    };
+
+    // ------------------------------
+    // Weather generation + safe window computation
+    // ------------------------------
+
+    function genWaveSeries({startMs, hours, scenario='moderate', seed=1, stepHours=1}){
+      // Synthetic significant wave height series (Hs) on a regular grid.
+      // Combines daily + synoptic components + random noise + a few storm bumps.
+      const rnd = seededRng(seed);
+      const presets = {
+        calm:     {base:0.7, daily:0.20, synoptic:0.15, noise:0.05, storms:0.6, stormRate:0.12},
+        moderate: {base:1.1, daily:0.35, synoptic:0.35, noise:0.12, storms:1.2, stormRate:0.22},
+        stormy:   {base:1.4, daily:0.45, synoptic:0.55, noise:0.18, storms:2.0, stormRate:0.35},
+      };
+      const p = presets[scenario] || presets.moderate;
+
+      const n = Math.max(2, Math.floor(hours/stepHours));
+
+      const stormCount = Math.max(1, Math.round((hours/24) * p.stormRate));
+      const storms = [];
+      for(let k=0;k<stormCount;k++){
+        const center = Math.floor(rnd()*n);
+        const width = 6 + Math.floor(rnd()*18); // in steps (hours)
+        const amp = p.storms * (0.7 + 0.6*rnd());
+        storms.push({center,width,amp});
+      }
+
+      const out = [];
+      for(let i=0; i<n; i++){
+        const h = i*stepHours;
+        const tDay = 2*Math.PI*(h%24)/24;
+        const tSyn = 2*Math.PI*h/(24*5);
+        let hs = p.base + p.daily*Math.sin(tDay+0.8) + p.synoptic*Math.sin(tSyn-1.7);
+        for(const s of storms){
+          const z = (i - s.center)/s.width;
+          hs += s.amp * Math.exp(-0.5*z*z);
+        }
+        hs += p.noise * (rnd()*2-1);
+        hs = Math.max(0, hs);
+        out.push({ t: startMs + h*HOUR_MS, hs });
+      }
+      return out;
+    }
+
+    function computeSafeStarts(wave, windowHours, stepHours, hsMax){
+      const n = wave.length;
+      const wSteps = Math.max(1, Math.round(windowHours/stepHours));
+      const safe = new Array(n).fill(false);
+      for(let i=0;i<n;i++){
+        if(i + wSteps > n) break;
+        let ok = true;
+        for(let j=0;j<wSteps;j++){
+          if(wave[i+j].hs > hsMax){ ok = false; break; }
+        }
+        safe[i] = ok;
+      }
+      return safe;
+    }
+
+    function findFirstSafeWithin(wave, safe, startMs, endMs){
+      // earliest index i such that wave[i].t>=startMs and wave[i].t<=endMs and safe[i]
+      const i0 = lowerBoundByT(wave, startMs);
+      const i1 = lowerBoundByT(wave, endMs);
+      for(let i=i0; i<i1; i++) if(safe[i]) return i;
+      return -1;
+    }
+
+    // ------------------------------
+    // Scheduling policies (trajectories)
+    // ------------------------------
+
+    function normalizeTasks(tasks){
+      return tasks.map(t=>({
+        ...t,
+        earliestStartMs: Date.parse(t.earliestStartISO),
+        latestEndMs: Date.parse(t.latestEndISO),
+      }));
+    }
+
+    function precomputeSafeByDoping(wave, cfg){
+      const out = {};
+      for(const level of Object.keys(cfg.dopingRules)){
+        const hsMax = cfg.dopingRules[level].hsMax;
+        out[level] = computeSafeStarts(wave, cfg.windowHours, cfg.stepHours, hsMax);
+      }
+      return out;
+    }
+
+    function simulateFIFO(tasks, wave, cfg, safeByDoping){
+      const tasksSorted = [...tasks].sort((a,b)=>a.earliestStartMs - b.earliestStartMs);
+      const plan = [];
+      let now = tasksSorted.length ? tasksSorted[0].earliestStartMs : wave[0].t;
+
+      for(const task of tasksSorted){
+        const rule = cfg.dopingRules[task.doping];
+        const safe = safeByDoping[String(task.doping)];
+        const start = Math.max(now, task.earliestStartMs);
+        const latestStart = task.latestEndMs - cfg.windowHours*HOUR_MS;
+        const i = findFirstSafeWithin(wave, safe, start, latestStart);
+        if(i < 0){
+          plan.push({...task, status:'unscheduled', chosenStartMs:null, delayHours:null});
+          continue;
+        }
+        const chosenStartMs = wave[i].t;
+        plan.push({
+          ...task,
+          status:'scheduled',
+          chosenStartMs,
+          delayHours: (chosenStartMs - task.earliestStartMs)/HOUR_MS,
+        });
+        now = chosenStartMs + cfg.windowHours*HOUR_MS + rule.cooldownHours*HOUR_MS;
+      }
+
+      return plan;
+    }
+
+    function simulateOpportunistic(tasks, wave, cfg, safeByDoping){
+      const remaining = new Map();
+      for(const t of tasks) remaining.set(t.id, {...t});
+
+      const t0 = Math.min(...tasks.map(t=>t.earliestStartMs));
+      const tMax = Math.max(...tasks.map(t=>t.latestEndMs));
+
+      let now = t0;
+      const plan = [];
+
+      // heuristic priority: earliest latestEnd (tightest deadline), then earliestStart
+      function pickTask(candidates){
+        candidates.sort((a,b)=> (a.latestEndMs - b.latestEndMs) || (a.earliestStartMs - b.earliestStartMs));
+        return candidates[0];
+      }
+
+      while(remaining.size > 0 && now <= tMax){
+        // eligible tasks at time 'now'
+        const candidates = [];
+        for(const task of remaining.values()){
+          const latestStart = task.latestEndMs - cfg.windowHours*HOUR_MS;
+          if(now < task.earliestStartMs) continue;
+          if(now > latestStart) continue;
+          const idx = lowerBoundByT(wave, now);
+          const safe = safeByDoping[String(task.doping)];
+          if(idx >= 0 && idx < safe.length && safe[idx]){
+            candidates.push({...task, idx});
+          }
+        }
+
+        if(candidates.length === 0){
+          now += cfg.stepHours * HOUR_MS;
+          continue;
+        }
+
+        const chosen = pickTask(candidates);
+        const chosenStartMs = wave[chosen.idx]?.t ?? now;
+        plan.push({
+          ...chosen,
+          status:'scheduled',
+          chosenStartMs,
+          delayHours: (chosenStartMs - chosen.earliestStartMs)/HOUR_MS,
+        });
+        remaining.delete(chosen.id);
+
+        const rule = cfg.dopingRules[chosen.doping];
+        now = chosenStartMs + cfg.windowHours*HOUR_MS + rule.cooldownHours*HOUR_MS;
+      }
+
+      // anything left becomes unscheduled
+      for(const task of remaining.values()){
+        plan.push({...task, status:'unscheduled', chosenStartMs:null, delayHours:null});
+      }
+
+      // stable output order: by earliestStart
+      plan.sort((a,b)=>a.earliestStartMs - b.earliestStartMs);
+      return plan;
+    }
+
+    function computeAvailableStartCount(safeArray, tStartMs, tEndMs, wave){
+      const i0 = lowerBoundByT(wave, tStartMs);
+      const i1 = lowerBoundByT(wave, tEndMs);
+      let c=0;
+      for(let i=i0;i<i1;i++) if(safeArray[i]) c++;
+      return c;
+    }
+
+    // ------------------------------
+    // Drawing
+    // ------------------------------
+
+    function withHiDPICanvas(canvas){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(320, Math.floor(rect.width * dpr));
+      const h = Math.max(160, Math.floor(rect.height * dpr));
+      if(canvas.width !== w || canvas.height !== h){
+        canvas.width = w; canvas.height = h;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      return {ctx, width: rect.width, height: rect.height};
+    }
+
+    function drawWaveChart(canvas, wave, safe, tasks, cfg, view){
+      const {ctx, width, height} = withHiDPICanvas(canvas);
+      ctx.clearRect(0,0,width,height);
+
+      const padL = 48, padR = 14, padT = 10, padB = 26;
+      const w = width - padL - padR;
+      const h = height - padT - padB;
+
+      const startIdx = clamp(view.startIdx, 0, wave.length-2);
+      const endIdx = clamp(view.endIdx, startIdx+2, wave.length-1);
+      const slice = wave.slice(startIdx, endIdx);
+
+      let yMin = 0;
+      let yMax = 0;
+      for(const p of slice) yMax = Math.max(yMax, p.hs);
+      yMax = Math.max(2.0, yMax*1.05);
+
+      function xFor(i){
+        const t = (i - startIdx) / Math.max(1,(endIdx-startIdx-1));
+        return padL + t * w;
+      }
+      function yFor(v){
+        const t = (v - yMin) / (yMax - yMin);
+        return padT + (1-t) * h;
+      }
+
+      // grid
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(148,163,184,0.18)';
+      ctx.fillStyle = 'rgba(148,163,184,0.80)';
+      ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+
+      const yTicks = 4;
+      for(let k=0;k<=yTicks;k++){
+        const v = yMin + (yMax-yMin)*k/yTicks;
+        const y = yFor(v);
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(padL+w, y);
+        ctx.stroke();
+        ctx.fillText(v.toFixed(1)+'m', 6, y+4);
+      }
+
+      // safe shading
+      ctx.fillStyle = 'rgba(52,211,153,0.14)';
+      for(let i=startIdx;i<endIdx;i++){
+        if(!safe[i]) continue;
+        const x0 = xFor(i);
+        const x1 = xFor(i + Math.round(cfg.windowHours/cfg.stepHours));
+        ctx.fillRect(x0, padT, Math.max(1,x1-x0), h);
+      }
+
+      // wave line
+      ctx.strokeStyle = 'rgba(56,189,248,0.95)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for(let i=startIdx;i<endIdx;i++){
+        const x = xFor(i);
+        const y = yFor(wave[i].hs);
+        if(i===startIdx) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+
+      // threshold line for visualised doping
+      const hsMax = cfg.dopingRules[view.vizDoping].hsMax;
+      ctx.strokeStyle = 'rgba(148,163,184,0.55)';
+      ctx.setLineDash([6,4]);
+      ctx.beginPath();
+      ctx.moveTo(padL, yFor(hsMax));
+      ctx.lineTo(padL+w, yFor(hsMax));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(148,163,184,0.85)';
+      ctx.fillText('Hs max (doping '+view.vizDoping+')', padL+8, yFor(hsMax)-6);
+
+      // task windows as rectangles
+      for(const task of tasks){
+        const t0 = task.earliestStartMs;
+        const t1 = task.latestEndMs;
+        const i0 = lowerBoundByT(wave, t0);
+        const i1 = lowerBoundByT(wave, t1);
+        if(i1 < startIdx || i0 > endIdx) continue;
+        const x0 = xFor(clamp(i0, startIdx, endIdx));
+        const x1 = xFor(clamp(i1, startIdx, endIdx));
+        ctx.fillStyle = 'rgba(251,113,133,0.10)';
+        ctx.strokeStyle = 'rgba(251,113,133,0.65)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.rect(x0, padT+2, Math.max(2,x1-x0), h-4);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // chosen starts markers
+      for(const task of tasks){
+        if(!task.chosenStartMs) continue;
+        const idx = lowerBoundByT(wave, task.chosenStartMs);
+        if(idx < startIdx || idx > endIdx) continue;
+        const x = xFor(idx);
+        const y = yFor(wave[idx]?.hs ?? 0);
+        ctx.fillStyle = 'rgba(251,191,36,0.95)';
+        ctx.beginPath();
+        ctx.arc(x,y,4,0,Math.PI*2);
+        ctx.fill();
+      }
+
+      // x-axis labels (dates)
+      ctx.fillStyle = 'rgba(148,163,184,0.85)';
+      ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+      const xTicks = 5;
+      for(let k=0;k<=xTicks;k++){
+        const i = Math.round(startIdx + (endIdx-startIdx-1)*k/xTicks);
+        const x = xFor(i);
+        const d = new Date(wave[i].t);
+        const lab = d.toISOString().slice(5,10); // MM-DD
+        ctx.fillText(lab, x-14, height-8);
+      }
+
+      // border
+      ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(padL, padT, w, h);
+    }
+
+    function buildStepSeries(plan, wave, cfg){
+      // return points [{t, y}] for cumulative completions
+      const scheduled = plan.filter(p=>p.status==='scheduled' && p.chosenStartMs!=null).sort((a,b)=>a.chosenStartMs-b.chosenStartMs);
+      const pts = [];
+      let y = 0;
+      const tStart = wave[0].t;
+      pts.push({t: tStart, y});
+      for(const p of scheduled){
+        pts.push({t: p.chosenStartMs, y});
+        y += 1;
+        pts.push({t: p.chosenStartMs + cfg.windowHours*HOUR_MS, y});
+      }
+      // extend to end
+      pts.push({t: wave[wave.length-1].t, y});
+      return pts;
+    }
+
+    function drawProgressChart(canvas, seriesA, seriesB, wave, view){
+      const {ctx, width, height} = withHiDPICanvas(canvas);
+      ctx.clearRect(0,0,width,height);
+      const padL=48, padR=14, padT=10, padB=26;
+      const w=width-padL-padR;
+      const h=height-padT-padB;
+
+      const t0 = wave[0].t;
+      const t1 = wave[wave.length-1].t;
+      const yMax = Math.max(1, Math.max(seriesA.at(-1)?.y||0, seriesB.at(-1)?.y||0));
+
+      function xForT(t){
+        const u = (t - t0) / Math.max(1,(t1-t0));
+        return padL + u*w;
+      }
+      function yFor(v){
+        const u = v / yMax;
+        return padT + (1-u)*h;
+      }
+
+      // grid
+      ctx.strokeStyle = 'rgba(148,163,184,0.18)';
+      ctx.fillStyle = 'rgba(148,163,184,0.80)';
+      ctx.lineWidth = 1;
+      ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+
+      for(let k=0;k<=yMax;k++){
+        const y = yFor(k);
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(padL+w, y);
+        ctx.stroke();
+        ctx.fillText(String(k), 14, y+4);
+      }
+
+      function drawSeries(pts, stroke){
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for(let i=0;i<pts.length;i++){
+          const x = xForT(pts[i].t);
+          const y = yFor(pts[i].y);
+          if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+      }
+
+      drawSeries(seriesA, 'rgba(251,113,133,0.95)');
+      drawSeries(seriesB, 'rgba(52,211,153,0.95)');
+
+      // x-axis labels
+      const xTicks = 5;
+      for(let k=0;k<=xTicks;k++){
+        const t = t0 + (t1-t0)*k/xTicks;
+        const x = xForT(t);
+        const d = new Date(t);
+        const lab = d.toISOString().slice(5,10);
+        ctx.fillText(lab, x-14, height-8);
+      }
+
+      ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+      ctx.strokeRect(padL, padT, w, h);
+    }
+
+    // ------------------------------
+    // DOM / App state
+    // ------------------------------
+
+    const el = {};
+
+    const app = {
+      tasks: JSON.parse(JSON.stringify(PRESET_TASKS_H2)),
+      dopingRules: JSON.parse(JSON.stringify(DEFAULT_DOPING_RULES)),
+      externalWave: null,
+      lastRun: null,
+    };
+
+    function getCfg(){
+      return {
+        windowHours: Number(el.windowHrs.value) || 3,
+        stepHours: Number(el.stepHrs.value) || 1,
+        days: Number(el.days.value) || 45,
+        scenario: el.weatherScenario.value,
+        seed: Number(el.seed.value) || 1,
+        policy: el.policy.value,
+        dopingRules: {
+          0: { ...app.dopingRules[0] },
+          1: { ...app.dopingRules[1] },
+          2: { ...app.dopingRules[2] },
+        }
+      };
+    }
+
+    function buildWave(cfg){
+      if(app.externalWave){
+        return app.externalWave;
+      }
+      const startMs = fromDatetimeLocalUTC(el.startDate.value);
+      const hours = cfg.days * 24;
+      return genWaveSeries({startMs, hours, scenario: cfg.scenario, seed: cfg.seed, stepHours: cfg.stepHours});
+    }
+
+    function renderDopingTable(){
+      const tbody = el.dopingTable;
+      tbody.innerHTML = '';
+      const rows = [0,1,2];
+      for(const lvl of rows){
+        const r = app.dopingRules[lvl];
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td class="mono">${lvl}</td>
+          <td>${escapeHtml(r.label)}</td>
+          <td><input data-doping="${lvl}" data-field="hsMax" type="number" step="0.1" min="0" value="${r.hsMax}" aria-label="Hs max for doping ${lvl}" /></td>
+          <td><input data-doping="${lvl}" data-field="cooldownHours" type="number" step="1" min="0" value="${r.cooldownHours}" aria-label="Cooldown hours for doping ${lvl}" /></td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      tbody.querySelectorAll('input').forEach(inp=>{
+        inp.addEventListener('input', ()=>{
+          const lvl = Number(inp.getAttribute('data-doping'));
+          const f = inp.getAttribute('data-field');
+          const val = Number(inp.value);
+          if(!Number.isFinite(val)) return;
+          app.dopingRules[lvl][f] = val;
+          if(app.lastRun) rerunAndRedraw();
+        });
+      });
+    }
+
+    function renderTaskTable(){
+      const tbody = el.taskTable;
+      tbody.innerHTML = '';
+
+      for(const task of app.tasks){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="text" value="${escapeAttr(task.name)}" data-id="${task.id}" data-field="name" aria-label="Task name" /></td>
+          <td><input type="datetime-local" value="${toDatetimeLocalUTC(Date.parse(task.earliestStartISO))}" data-id="${task.id}" data-field="earliestStartISO" aria-label="Earliest start" /></td>
+          <td><input type="datetime-local" value="${toDatetimeLocalUTC(Date.parse(task.latestEndISO))}" data-id="${task.id}" data-field="latestEndISO" aria-label="Latest end" /></td>
+          <td>
+            <select data-id="${task.id}" data-field="doping" aria-label="Doping level">
+              <option value="0" ${task.doping===0?'selected':''}>0</option>
+              <option value="1" ${task.doping===1?'selected':''}>1</option>
+              <option value="2" ${task.doping===2?'selected':''}>2</option>
+            </select>
+          </td>
+          <td><button class="btn danger" data-id="${task.id}" data-action="remove" type="button">Remove</button></td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      // listeners
+      tbody.querySelectorAll('input, select').forEach(inp=>{
+        inp.addEventListener('change', ()=>{
+          const id = inp.getAttribute('data-id');
+          const field = inp.getAttribute('data-field');
+          const task = app.tasks.find(t=>t.id===id);
+          if(!task) return;
+
+          if(field === 'earliestStartISO' || field === 'latestEndISO'){
+            const ms = fromDatetimeLocalUTC(inp.value);
+            task[field] = fmtIso(ms);
+          } else if(field === 'doping'){
+            task[field] = Number(inp.value);
+          } else {
+            task[field] = inp.value;
+          }
+
+          if(app.lastRun) rerunAndRedraw();
+        });
+      });
+
+      tbody.querySelectorAll('button[data-action="remove"]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = btn.getAttribute('data-id');
+          app.tasks = app.tasks.filter(t=>t.id !== id);
+          renderTaskTable();
+          if(app.lastRun) rerunAndRedraw();
+        });
+      });
+    }
+
+    function renderOutput(plan, wave, cfg, safeByDoping){
+      // KPIs
+      const scheduled = plan.filter(p=>p.status==='scheduled');
+      const feasible = scheduled.length;
+      el.kpiFeasible.textContent = `${feasible} / ${plan.length}`;
+
+      const avgDelay = feasible ? (scheduled.reduce((a,p)=>a + (p.delayHours||0), 0) / feasible) : 0;
+      el.kpiAvgDelay.textContent = feasible ? avgDelay.toFixed(1) : '–';
+
+      // utilisation: scheduled starts / available starts for medium doping (viz doping)
+      const vizLvl = Number(el.vizDoping.value);
+      const safe = safeByDoping[String(vizLvl)];
+      const t0 = wave[0].t;
+      const t1 = wave[wave.length-1].t;
+      const availableStarts = computeAvailableStartCount(safe, t0, t1, wave);
+      const util = availableStarts ? (scheduled.length / availableStarts) : 0;
+      el.kpiWeatherUtil.textContent = availableStarts ? util.toFixed(3) : '–';
+
+      // table
+      const tbody = el.outTable;
+      tbody.innerHTML = '';
+      for(const p of plan){
+        const tr = document.createElement('tr');
+        const statusTag = p.status==='scheduled'
+          ? `<span class="tag good">scheduled</span>`
+          : `<span class="tag bad">unscheduled</span>`;
+
+        const chosen = p.chosenStartMs ? fmtIso(p.chosenStartMs) : '–';
+        const delay = (p.delayHours==null) ? '–' : p.delayHours.toFixed(1);
+
+        tr.innerHTML = `
+          <td>${escapeHtml(p.name)} <span class="tag">d=${p.doping}</span></td>
+          <td>${statusTag}</td>
+          <td class="mono">${chosen}</td>
+          <td class="mono">${delay}</td>
+          <td class="mini">${escapeHtml(p.notes || '')}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      // update tasks array with chosenStartMs for drawing
+      const byId = new Map(plan.map(p=>[p.id, p]));
+      for(const t of app.tasks){
+        const p = byId.get(t.id);
+        t.chosenStartMs = p?.chosenStartMs || null;
+      }
+
+      // charts
+      redrawCharts(wave, cfg, safeByDoping, plan);
+
+      // export schema
+      el.exportSchema.textContent = JSON.stringify({
+        meta: {windowHours: cfg.windowHours, stepHours: cfg.stepHours},
+        inputs: {wave: {startISO: fmtIso(wave[0].t), stepHours: cfg.stepHours, hs: '[...]'}},
+        output: {plan: '[...]'}
+      }, null, 2);
+    }
+
+    function redrawCharts(wave, cfg, safeByDoping, plan){
+      const vizLvl = Number(el.vizDoping.value);
+      const safe = safeByDoping[String(vizLvl)];
+
+      // compute view range from zoom + scroll
+      const zoomDays = clamp(Number(el.zoom.value)||18, 2, cfg.days);
+      const scroll = clamp(Number(el.scrollDay.value)||0, 0, Math.max(0, cfg.days-zoomDays));
+      const startMs = wave[0].t + scroll*24*HOUR_MS;
+      const endMs = startMs + zoomDays*24*HOUR_MS;
+      const startIdx = lowerBoundByT(wave, startMs);
+      const endIdx = lowerBoundByT(wave, endMs);
+
+      drawWaveChart(el.waveCanvas, wave, safe, plan, cfg, {startIdx, endIdx, vizDoping: vizLvl});
+
+      // progress chart compares fifo vs opportunistic (regardless of selected policy)
+      const tasks = normalizeTasks(app.tasks);
+      const safeAll = safeByDoping;
+      const planA = simulateFIFO(tasks, wave, cfg, safeAll);
+      const planB = simulateOpportunistic(tasks, wave, cfg, safeAll);
+      const sA = buildStepSeries(planA, wave, cfg);
+      const sB = buildStepSeries(planB, wave, cfg);
+      drawProgressChart(el.progressCanvas, sA, sB, wave, {});
+    }
+
+    function run(){
+      const cfg = getCfg();
+      const wave = buildWave(cfg);
+      const tasks = normalizeTasks(app.tasks);
+      const safeByDoping = precomputeSafeByDoping(wave, cfg);
+
+      const plan = (cfg.policy === 'opportunistic')
+        ? simulateOpportunistic(tasks, wave, cfg, safeByDoping)
+        : simulateFIFO(tasks, wave, cfg, safeByDoping);
+
+      app.lastRun = { cfg, wave, tasks, safeByDoping, plan };
+      renderOutput(plan, wave, cfg, safeByDoping);
+    }
+
+    function rerunAndRedraw(){
+      if(!app.lastRun) return;
+      run();
+    }
+
+    function resetPreset(){
+      app.externalWave = null;
+      app.dopingRules = JSON.parse(JSON.stringify(DEFAULT_DOPING_RULES));
+      app.tasks = JSON.parse(JSON.stringify(PRESET_TASKS_H2));
+      app.lastRun = null;
+      renderDopingTable();
+      renderTaskTable();
+      toast('Reset to preset');
+      // clear KPIs
+      el.kpiFeasible.textContent = '–';
+      el.kpiAvgDelay.textContent = '–';
+      el.kpiWeatherUtil.textContent = '–';
+      el.outTable.innerHTML = '';
+      // redraw blank charts
+      const cfg = getCfg();
+      const wave = buildWave(cfg);
+      const safeByDoping = precomputeSafeByDoping(wave, cfg);
+      redrawCharts(wave, cfg, safeByDoping, normalizeTasks(app.tasks));
+    }
+
+    function exportJSON(){
+      if(!app.lastRun){ toast('Run first'); return; }
+      const {cfg, wave, plan} = app.lastRun;
+      const payload = {
+        meta: {
+          generatedAt: new Date().toISOString(),
+          windowHours: cfg.windowHours,
+          stepHours: cfg.stepHours,
+          scenario: app.externalWave ? 'imported' : cfg.scenario,
+          seed: cfg.seed,
+          policy: cfg.policy,
+          dopingRules: cfg.dopingRules,
+        },
+        inputs: {
+          wave: {
+            startISO: fmtIso(wave[0].t),
+            stepHours: cfg.stepHours,
+            hs: wave.map(p=>Number(p.hs.toFixed(3))),
+          }
+        },
+        output: {
+          plan: plan.map(p=>({
+            id: p.id,
+            name: p.name,
+            doping: p.doping,
+            earliestStartISO: p.earliestStartISO,
+            latestEndISO: p.latestEndISO,
+            status: p.status,
+            chosenStartISO: p.chosenStartMs ? fmtIso(p.chosenStartMs) : null,
+            delayHours: p.delayHours == null ? null : Number(p.delayHours.toFixed(2)),
+            notes: p.notes || ''
+          }))
+        }
+      };
+
+      const text = JSON.stringify(payload, null, 2);
+      const blob = new Blob([text], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'maintenance_lens_output.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast('Downloaded JSON');
+    }
+
+    function addTask(){
+      const id = 'task_' + Math.random().toString(16).slice(2,10);
+      const startMs = fromDatetimeLocalUTC(el.startDate.value) + 24*HOUR_MS;
+      const task = {
+        id,
+        name: 'New task',
+        earliestStartISO: fmtIso(startMs),
+        latestEndISO: fmtIso(startMs + 48*HOUR_MS),
+        doping: 1,
+        notes: ''
+      };
+      app.tasks.push(task);
+      renderTaskTable();
+      toast('Task added');
+    }
+
+    function loadPreset(){
+      app.tasks = JSON.parse(JSON.stringify(PRESET_TASKS_H2));
+      renderTaskTable();
+      toast('Loaded Hornsea Two preset');
+      if(app.lastRun) rerunAndRedraw();
+    }
+
+    function importFromPaste(){
+      let obj;
+      try{ obj = JSON.parse(el.importBox.value); }
+      catch(e){ toast('Invalid JSON'); return; }
+
+      if(!obj || typeof obj !== 'object' || !Array.isArray(obj.hs)){
+        toast('Expected {startISO, stepHours, hs:[...] }');
+        return;
+      }
+      const startMs = Date.parse(obj.startISO);
+      const stepHours = Number(obj.stepHours) || 1;
+      if(!Number.isFinite(startMs) || !Number.isFinite(stepHours) || stepHours<=0){
+        toast('Bad startISO/stepHours');
+        return;
+      }
+
+      const wave = obj.hs.map((v,i)=>({t: startMs + i*stepHours*HOUR_MS, hs: Number(v)})).filter(p=>Number.isFinite(p.hs));
+      if(wave.length < 10){ toast('Need more data points'); return; }
+
+      app.externalWave = wave;
+      // sync UI
+      el.stepHrs.value = String(stepHours);
+      el.startDate.value = toDatetimeLocalUTC(startMs);
+      el.days.value = String(Math.max(2, Math.round((wave.length*stepHours)/24)));
+
+      toast('Imported wave series');
+      app.lastRun = null;
+      run();
+    }
+
+    function setLevel(level){
+      document.body.setAttribute('data-level', String(level));
+      el.lvl0.setAttribute('aria-pressed', level===0 ? 'true' : 'false');
+      el.lvl1.setAttribute('aria-pressed', level===1 ? 'true' : 'false');
+      el.lvl2.setAttribute('aria-pressed', level===2 ? 'true' : 'false');
+    }
+
+    function showTab(which){
+      const tabs = {
+        dash: {btn: el.tabDash, panel: el.panelDash},
+        lens: {btn: el.tabLens, panel: el.panelLens},
+        data: {btn: el.tabData, panel: el.panelData},
+        about:{btn: el.tabAbout,panel: el.panelAbout},
+      };
+      for(const k of Object.keys(tabs)){
+        const on = (k===which);
+        tabs[k].btn.setAttribute('aria-selected', on?'true':'false');
+        tabs[k].panel.classList.toggle('hidden', !on);
+      }
+    }
+
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, s=>({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+      }[s]));
+    }
+
+    function escapeAttr(str){
+      return escapeHtml(str).replace(/\n/g,' ');
+    }
+
+    function init(){
+      // grab elements
+      [
+        'weatherScenario','seed','startDate','days','windowHrs','stepHrs','policy','runBtn','resetBtn','exportBtn',
+        'dopingTable','taskTable','outTable','kpiFeasible','kpiAvgDelay','kpiWeatherUtil',
+        'waveCanvas','progressCanvas','vizDoping','zoom','scrollDay',
+        'addTaskBtn','loadPresetBtn','resetBtn','tabDash','tabLens','tabData','tabAbout',
+        'panelDash','panelLens','panelData','panelAbout','importBox','importBtn','copyTemplateBtn','copyPythonBtn',
+        'exportSchema','lvl0','lvl1','lvl2'
+      ].forEach(id=>{ el[id] = document.getElementById(id); });
+
+      // default start date aligned to preset (UTC)
+      const defaultStart = Date.parse('2025-06-08T00:00:00Z');
+      el.startDate.value = toDatetimeLocalUTC(defaultStart);
+
+      // python snippet
+      el.pySnippet.textContent = [
+        '# Convert Met Office / other wave NetCDF → the JSON format this demo accepts',
+        'import xarray as xr',
+        'import numpy as np',
+        '',
+        "ds = xr.open_dataset('your_wave_file.nc')",
+        "# Inspect variables: print(ds)  # look for significant wave height (often 'VHM0' or similar)",
+        "var = None",
+        "for cand in ['VHM0','hs','wave_significant_height','significant_wave_height']:",
+        "    if cand in ds: var = cand; break",
+        "if var is None: raise ValueError('Could not find Hs variable')",
+        '',
+        "# Choose a point (nearest grid cell) — replace with your lat/lon",
+        "lat, lon = 53.907425, 1.468515",
+        "pt = ds[var].sel(latitude=lat, longitude=lon, method='nearest') if {'latitude','longitude'}.issubset(pt.dims) else ds[var]",
+        '',
+        "# Ensure time is decoded",
+        "t = pt['time'].values",
+        "hs = pt.values",
+        '',
+        "# Build payload",
+        "startISO = np.datetime_as_string(t[0], unit='s') + 'Z'",
+        "stepHours = 1  # adjust if your time grid differs",
+        "payload = {'startISO': startISO, 'stepHours': stepHours, 'hs': [float(x) for x in hs]}",
+        "print(payload)"
+      ].join('\n');
+
+      // export schema example
+      el.exportSchema.textContent = [
+        '{',
+        '  "meta": {"windowHours": 3, "stepHours": 1, "policy": "fifo", ...},',
+        '  "inputs": {',
+        '    "wave": {"startISO": "2025-06-08T00:00:00Z", "stepHours": 1, "hs": [1.1, 1.0, ...]}',
+        '  },',
+        '  "output": {',
+        '    "plan": [{"task":"...", "status":"scheduled", "chosenStartISO":"...", "delayHours": 6.0}, ...]',
+        '  }',
+        '}'
+      ].join('\n');
+
+      // render initial tables
+      renderDopingTable();
+      renderTaskTable();
+
+      // wire events
+      el.runBtn.addEventListener('click', run);
+      el.resetBtn.addEventListener('click', resetPreset);
+      el.exportBtn.addEventListener('click', exportJSON);
+      el.addTaskBtn.addEventListener('click', addTask);
+      el.loadPresetBtn.addEventListener('click', loadPreset);
+      el.vizDoping.addEventListener('change', ()=>{ if(app.lastRun) rerunAndRedraw(); else redrawBlank(); });
+      el.zoom.addEventListener('change', ()=>{ if(app.lastRun) rerunAndRedraw(); else redrawBlank(); });
+      el.scrollDay.addEventListener('change', ()=>{ if(app.lastRun) rerunAndRedraw(); else redrawBlank(); });
+
+      // live changes
+      [el.weatherScenario, el.seed, el.startDate, el.days, el.windowHrs, el.stepHrs, el.policy].forEach(inp=>{
+        inp.addEventListener('change', ()=>{
+          app.externalWave = null; // switching primary inputs invalidates import
+          if(app.lastRun) rerunAndRedraw(); else redrawBlank();
+        });
+      });
+
+      // tabs
+      el.tabDash.addEventListener('click', ()=>showTab('dash'));
+      el.tabLens.addEventListener('click', ()=>showTab('lens'));
+      el.tabData.addEventListener('click', ()=>showTab('data'));
+      el.tabAbout.addEventListener('click', ()=>showTab('about'));
+
+      // level buttons
+      el.lvl0.addEventListener('click', ()=>setLevel(0));
+      el.lvl1.addEventListener('click', ()=>setLevel(1));
+      el.lvl2.addEventListener('click', ()=>setLevel(2));
+
+      // data import
+      el.importBtn.addEventListener('click', importFromPaste);
+      el.copyTemplateBtn.addEventListener('click', ()=>{
+        const tmpl = {
+          startISO: '2025-06-08T00:00:00Z',
+          stepHours: 1,
+          hs: [1.1, 1.0, 0.9, 1.2]
+        };
+        copyToClipboard(JSON.stringify(tmpl, null, 2));
+      });
+      el.copyPythonBtn.addEventListener('click', ()=>copyToClipboard(el.pySnippet.textContent));
+
+      // initial draw
+      redrawBlank();
+    }
+
+    function redrawBlank(){
+      const cfg = getCfg();
+      const wave = buildWave(cfg);
+      const safeByDoping = precomputeSafeByDoping(wave, cfg);
+      const tasks = normalizeTasks(app.tasks);
+      // no chosen starts yet
+      redrawCharts(wave, cfg, safeByDoping, tasks);
+    }
+
+    window.addEventListener('resize', ()=>{
+      if(app.lastRun){
+        rerunAndRedraw();
+      } else {
+        redrawBlank();
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', init);
+
+  })();
+  </script>
+</body>
+</html>
