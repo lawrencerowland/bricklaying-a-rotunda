@@ -7,4 +7,4 @@ index,name,description,tags,link
 6,Toy Project Dynamics (Lenses) Demo,Interactive demo of brickwork dynamics alongside slot-based lens observations and wiring-diagram notes.,simulation|lens|brickwork,apps/toy_project_dynamics_lenses_demo.html
 7,Toy Project Dynamics Notes,Companion notes unpacking the discrete toy model and continuous slot-observation lens framing.,notes|lens|analysis,apps/toy_project_dynamics_lenses_notes.html
 8,Dynamic Project States — Revised Interactive Model,Revised interactive model pairing brickwork project-state transitions with a lens-based viewing window demo.,simulation|lens|brickwork|model,apps/Lens-plus-arena-backbone.html
-9,Dynamic Project States — Brick Cylinder (Toy Model),Course-by-course brick cylinder build with branching cw/ccw choices rendered as possible trajectories.,simulation|brickwork|trajectory,apps/Possible-trajectories
+9,Wiring Diagrams ↔ Lenses Explainer,Interactive explainer showing how wiring diagrams relate to lenses with SMC intuition and cartesian semantics.,wiring|lens|explainer|diagram,apps/wiring_lens_explainer.html
