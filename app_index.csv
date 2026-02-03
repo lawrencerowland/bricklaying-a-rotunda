@@ -1,4 +1,4 @@
 index,name,description,tags,link
 1,Dynamic Project States Demo,Interactive toy model that visualizes cylindrical brickwork dynamics alongside a continuous circular-slot lens simulation.,simulation|brickwork|lens,apps/dynamic_project_states_demo.html
 2,Lens-based Toy Model Review,Executive review plus formalization notes with runnable discrete and continuous demos aligned to the lens framework.,review|formalization|analysis,apps/feedback%20from%205%20Pro%20on%20Edison.html
-3,Consolidated Dossier & Working Canvas,Structured dossier consolidating project notes, working canvas elements, and operational checklists for Dynamic Project States.,dossier|planning|notes,apps/overview_of_problem.html
+3,Consolidated Dossier & Working Canvas,"Structured dossier consolidating project notes, working canvas elements, and operational checklists for Dynamic Project States.",dossier|planning|notes,apps/overview_of_problem.html
