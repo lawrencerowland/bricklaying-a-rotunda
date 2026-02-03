@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>App Index</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Home</p>
+          <h1>App Index</h1>
+          <p class="subtitle">
+            Browse the apps below. Data is loaded directly from the
+            <code>app_index.csv</code> file.
+          </p>
+        </div>
+        <div class="controls">
+          <label class="search">
+            <span>Search</span>
+            <input type="search" id="search" placeholder="Filter by name, tags, or description" />
+          </label>
+        </div>
+      </header>
+
+      <section>
+        <div class="status" id="status">Loading app index…</div>
+        <div class="grid" id="app-grid" hidden></div>
+      </section>
+    </main>
+
+    <template id="card-template">
+      <article class="card">
+        <div class="card-head">
+          <span class="index"></span>
+          <h2 class="name"></h2>
+        </div>
+        <p class="description"></p>
+        <div class="tags"></div>
+        <a class="link" target="_blank" rel="noreferrer noopener">Visit app</a>
+      </article>
+    </template>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const gridEl = document.getElementById('app-grid');
+      const searchEl = document.getElementById('search');
+      const template = document.getElementById('card-template');
+
+      const parseCsv = (csvText) => {
+        const lines = csvText.trim().split(/\r?\n/);
+        if (lines.length === 0) return [];
+        const headers = lines[0].split(',').map((header) => header.trim());
+        return lines.slice(1).map((line) => {
+          const values = line.split(',').map((value) => value.trim());
+          return headers.reduce((row, header, index) => {
+            row[header] = values[index] ?? '';
+            return row;
+          }, {});
+        });
+      };
+
+      const buildCard = (entry) => {
+        const clone = template.content.cloneNode(true);
+        clone.querySelector('.index').textContent = `#${entry.index}`;
+        clone.querySelector('.name').textContent = entry.hame;
+        clone.querySelector('.description').textContent = entry.description;
+        const tagsEl = clone.querySelector('.tags');
+        entry.tags
+          .split('|')
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+          .forEach((tag) => {
+            const span = document.createElement('span');
+            span.textContent = tag;
+            tagsEl.appendChild(span);
+          });
+        const linkEl = clone.querySelector('.link');
+        linkEl.href = entry.link;
+        linkEl.textContent = `Open ${entry.hame}`;
+        return clone;
+      };
+
+      const render = (entries) => {
+        gridEl.innerHTML = '';
+        if (entries.length === 0) {
+          statusEl.textContent = 'No apps match your search.';
+          gridEl.hidden = true;
+          return;
+        }
+        statusEl.textContent = `${entries.length} app${entries.length === 1 ? '' : 's'} listed.`;
+        gridEl.hidden = false;
+        entries.forEach((entry) => {
+          gridEl.appendChild(buildCard(entry));
+        });
+      };
+
+      const loadApps = async () => {
+        try {
+          const response = await fetch('app_index.csv');
+          if (!response.ok) {
+            throw new Error('Unable to load app_index.csv');
+          }
+          const csvText = await response.text();
+          const entries = parseCsv(csvText);
+          const normalized = entries.map((entry) => ({
+            ...entry,
+            haystack: `${entry.hame} ${entry.description} ${entry.tags}`.toLowerCase(),
+          }));
+
+          const update = () => {
+            const query = searchEl.value.trim().toLowerCase();
+            const filtered = query
+              ? normalized.filter((entry) => entry.haystack.includes(query))
+              : normalized;
+            render(filtered);
+          };
+
+          searchEl.addEventListener('input', update);
+          update();
+        } catch (error) {
+          statusEl.textContent = error.message;
+          gridEl.hidden = true;
+        }
+      };
+
+      loadApps();
+    </script>
+  </body>
+</html>
