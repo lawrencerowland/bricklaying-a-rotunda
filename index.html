@@ -65,7 +65,7 @@
       const buildCard = (entry) => {
         const clone = template.content.cloneNode(true);
         clone.querySelector('.index').textContent = `#${entry.index}`;
-        clone.querySelector('.name').textContent = entry.hame;
+        clone.querySelector('.name').textContent = entry.name;
         clone.querySelector('.description').textContent = entry.description;
         const tagsEl = clone.querySelector('.tags');
         entry.tags
@@ -79,7 +79,7 @@
           });
         const linkEl = clone.querySelector('.link');
         linkEl.href = entry.link;
-        linkEl.textContent = `Open ${entry.hame}`;
+        linkEl.textContent = `Open ${entry.name}`;
         return clone;
       };
 
@@ -107,7 +107,7 @@
           const entries = parseCsv(csvText);
           const normalized = entries.map((entry) => ({
             ...entry,
-            haystack: `${entry.hame} ${entry.description} ${entry.tags}`.toLowerCase(),
+            haystack: `${entry.name} ${entry.description} ${entry.tags}`.toLowerCase(),
           }));
 
           const update = () => {
