@@ -4,3 +4,5 @@ index,name,description,tags,link
 3,Consolidated Dossier & Working Canvas,"Structured dossier consolidating project notes, working canvas elements, and operational checklists for Dynamic Project States.",dossier|planning|notes,apps/overview_of_problem.html
 4,Possible Trajectories,Interactive trajectory exploration with manual and policy-driven branching choices in a brickwork toy model.,trajectory|policy|simulation,apps/Possible-trajectories.html
 5,Bricklaying Trajectories,Interactive trajectories for bricklaying as global sections on a discrete cylinder with selectable policies and small-multiple comparisons.,trajectory|policy|visualization,apps/Trajectories.html
+6,Toy Project Dynamics (Lenses) Demo,Interactive demo of brickwork dynamics alongside slot-based lens observations and wiring-diagram notes.,simulation|lens|brickwork,apps/toy_project_dynamics_lenses_demo.html
+7,Toy Project Dynamics Notes,Companion notes unpacking the discrete toy model and continuous slot-observation lens framing.,notes|lens|analysis,apps/toy_project_dynamics_lenses_notes.html
