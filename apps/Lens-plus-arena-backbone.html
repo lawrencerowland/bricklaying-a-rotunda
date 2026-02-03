@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Project States — Revised Interactive Model</title>
+  <style>
+    :root{
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --soft: #f3f4f6;
+      --accent: #2563eb;
+      --good: #16a34a;
+      --warn: #f59e0b;
+      --bad: #dc2626;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --shadow: 0 1px 2px rgba(0,0,0,0.04);
+      --radius: 12px;
+    }
+
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.35;
+    }
+
+    .min-h-64{ min-height: 16rem; }
+    .app{ width: 100%; }
+
+    header{
+      background: var(--ink);
+      color: #fff;
+      padding: 1rem 1.25rem;
+    }
+    header h1{
+      margin: 0 0 0.25rem 0;
+      font-size: clamp(1.05rem, 2.3vw, 1.35rem);
+      letter-spacing: 0.2px;
+    }
+    header p{
+      margin: 0;
+      font-size: clamp(0.8rem, 1.7vw, 0.95rem);
+      opacity: 0.85;
+    }
+
+    main{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1rem;
+    }
+
+    .card h2{
+      margin: 0 0 .5rem 0;
+      font-size: clamp(1rem, 2.1vw, 1.25rem);
+    }
+
+    .card h3{
+      margin: 0.9rem 0 .45rem 0;
+      font-size: clamp(0.95rem, 1.9vw, 1.1rem);
+    }
+
+    .muted{ color: var(--muted); }
+    .mono{ font-family: var(--mono); }
+
+    .pill{
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--soft);
+      font-size: 0.78rem;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .grid2{
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+    @media (min-width: 920px){
+      .grid2{ grid-template-columns: 1.1fr 0.9fr; }
+    }
+
+    .grid2.flip{
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 920px){
+      .grid2.flip{ grid-template-columns: 0.9fr 1.1fr; }
+    }
+
+    .controls{
+      display: grid;
+      gap: .75rem;
+    }
+
+    .controlRow{
+      display: grid;
+      gap: .5rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 520px){
+      .controlRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    label{
+      display: grid;
+      gap: .25rem;
+      font-size: 0.85rem;
+      color: var(--ink);
+    }
+    input[type="number"], input[type="text"], select{
+      width: 100%;
+      padding: .5rem .55rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+    }
+    input[type="checkbox"]{ transform: translateY(1px); }
+    .inline{
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btnRow{
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      align-items: center;
+    }
+    button{
+      padding: .55rem .7rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--ink);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    button.secondary{
+      background: #fff;
+      color: var(--ink);
+    }
+    button.ghost{
+      background: transparent;
+      color: var(--ink);
+    }
+    button:disabled{
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .canvasGrid{
+      display: grid;
+      gap: .75rem;
+    }
+    .canvasWrap{
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      overflow: hidden;
+    }
+    .canvasWrap.wide{
+      aspect-ratio: 16 / 6;
+    }
+    .canvasWrap canvas{
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .stats{
+      display: grid;
+      gap: .5rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 560px){
+      .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .stat{
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .6rem .7rem;
+      background: #fff;
+    }
+    .stat .k{ font-size: .78rem; color: var(--muted); margin-bottom: .1rem; }
+    .stat .v{ font-size: 1.0rem; font-weight: 700; color: var(--ink); }
+    .stat .s{ font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+
+    .log{
+      background: #0b1020;
+      color: #e2e8f0;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: .75rem;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+      overflow: auto;
+      max-height: 14rem;
+    }
+
+    .dopingGrid{
+      display: grid;
+      gap: .5rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (min-width: 680px){
+      .dopingGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (min-width: 980px){
+      .dopingGrid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    .dopingCell{
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .5rem .6rem;
+      background: #fff;
+      display: grid;
+      gap: .35rem;
+    }
+    .dopingCell small{ color: var(--muted); }
+
+    table{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    th, td{
+      border-bottom: 1px solid var(--border);
+      padding: .5rem .35rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th{ color: var(--muted); font-weight: 700; font-size: .78rem; letter-spacing: .2px; text-transform: uppercase; }
+
+    .kbd{
+      font-family: var(--mono);
+      font-size: .78rem;
+      padding: .12rem .35rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--soft);
+    }
+
+    details summary{
+      cursor: pointer;
+      user-select: none;
+      color: var(--ink);
+      font-weight: 650;
+      margin-top: .5rem;
+    }
+    details .inner{
+      margin-top: .5rem;
+      border-left: 3px solid var(--border);
+      padding-left: .8rem;
+      color: var(--muted);
+    }
+
+    /* Toast */
+    .toastHost{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      padding: .75rem;
+      z-index: 9999;
+    }
+    .toast{
+      pointer-events: auto;
+      background: rgba(17,24,39,0.92);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: .65rem .75rem;
+      width: min(720px, 95vw);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      display: flex;
+      gap: .6rem;
+      align-items: flex-start;
+    }
+    .toast .dot{
+      width: .75rem;
+      height: .75rem;
+      border-radius: 999px;
+      margin-top: .25rem;
+      background: var(--accent);
+      flex: 0 0 auto;
+    }
+    .toast.warn .dot{ background: var(--warn); }
+    .toast.err .dot{ background: var(--bad); }
+    .toast .msg{
+      font-size: .9rem;
+    }
+    .toast .msg small{ display:block; opacity:.8; margin-top:.1rem; }
+
+    /* fallback block */
+    .fallbackBox{
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      background: #fff;
+    }
+
+    .svgBox{
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: .75rem;
+      overflow: auto;
+    }
+    .svgBox svg{ width: min(980px, 100%); height: auto; display:block; }
+  </style>
+</head>
+<body>
+  <div id="app" class="app min-h-64" data-timeout="3000">
+    <noscript>
+      <div class="card" style="margin:1rem;">
+        Interactive visualisation requires JavaScript.
+      </div>
+    </noscript>
+
+    <header>
+      <h1>Dynamic Project States — Revised Interactive Model</h1>
+      <p>Two linked demos: (A) brickwork as constrained project-state transitions; (B) a “viewing window” observer as a simpler precursor for partial visibility.</p>
+    </header>
+
+    <main>
+      <section class="card" aria-label="Overview">
+        <div class="inline" style="justify-content:space-between; align-items:flex-start;">
+          <div>
+            <h2 style="margin-bottom:.25rem;">Restatement: what this model is</h2>
+            <p class="muted" style="margin:0;">
+              We treat a project as a <b>state space</b> plus <b>allowed transitions</b>. The brick demo makes those transitions concrete (build / wait / switch direction).
+              The circle demo shows a key planning reality: you often only <b>observe</b> part of what’s happening—so you need an explicit input→output map.
+            </p>
+          </div>
+          <div class="inline">
+            <span class="pill">v2.0</span>
+            <span class="pill"><span style="color:var(--good);">●</span> improved analytics</span>
+            <span class="pill"><span style="color:var(--accent);">●</span> corrected lens wiring</span>
+          </div>
+        </div>
+
+        <details>
+          <summary>What was corrected + improved</summary>
+          <div class="inner">
+            <ul style="margin:.4rem 0 0 1.1rem; padding:0;">
+              <li><b>Corrected lens wording</b> to match the passforward/passback (“Myers-style”) lens shape and the “system-as-lens” doctrine narrative.</li>
+              <li><b>Brick model clarified</b>: each course’s doping affects (i) curing delay after that course and (ii) direction constraint for the next course.</li>
+              <li><b>Added real planning analytics</b>: total feasible plans, switch-count histogram, min/mean/max switches, and time estimates including setup penalties.</li>
+              <li><b>Circle model improved</b>: analytic visibility windows (entry/exit times) + timeline view, not just sampled logging.</li>
+              <li><b>Robust UI</b>: responsive layout, reserved canvas space, pause/resume controls, and a safe fallback path.</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <!-- A. Brickwork -->
+      <section class="card" aria-label="Brickwork toy model">
+        <div class="inline" style="justify-content:space-between; align-items:flex-start;">
+          <div>
+            <h2 style="margin-bottom:.25rem;">A. Cylindrical Brickwork — Project-State Toy Model</h2>
+            <p class="muted" style="margin:0;">
+              Build a circular installation <b>course-by-course</b>. Each course has a doping label (D0/D1/D2) that changes <b>what transitions are allowed next</b> and how long you must wait.
+              This is a compact stand-in for real project constraints (dependencies, cure times, changeover/setup costs).
+            </p>
+          </div>
+          <div class="inline" style="gap:.4rem;">
+            <span class="pill"><span style="color:#9ca3af;">●</span> D0 standard</span>
+            <span class="pill"><span style="color:var(--good);">●</span> D1 fast-cure</span>
+            <span class="pill"><span style="color:var(--bad);">●</span> D2 slow-cure</span>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top: .85rem;">
+          <div class="canvasGrid">
+            <div class="canvasWrap" aria-label="Brick build canvas"><canvas id="brickCanvas"></canvas></div>
+            <div class="canvasWrap wide" aria-label="Switch histogram"><canvas id="brickHist"></canvas></div>
+          </div>
+
+          <div class="controls">
+            <div class="controlRow">
+              <label>
+                Courses (N)
+                <input id="brickN" type="number" min="1" max="40" value="8">
+              </label>
+              <label>
+                Bricks per course (B)
+                <input id="brickB" type="number" min="6" max="240" value="48">
+              </label>
+              <label>
+                Start offset on course 1 (0…B−1)
+                <input id="brickOffset" type="number" min="0" max="239" value="0">
+              </label>
+              <label>
+                Switch/setup penalty (steps)
+                <input id="brickSwitchPenalty" type="number" min="0" max="20" value="2">
+              </label>
+              <label>
+                Base cure steps (D0)
+                <input id="brickBaseCure" type="number" min="0" max="20" value="1">
+              </label>
+              <label>
+                Extra cure steps (D2)
+                <input id="brickSlowExtra" type="number" min="0" max="20" value="2">
+              </label>
+            </div>
+
+            <div class="inline">
+              <label class="inline" style="gap:.5rem;">
+                <input id="brickIncludeFinalCure" type="checkbox" checked>
+                Include final cure after last course
+              </label>
+              <span class="pill">Time unit: “steps”</span>
+            </div>
+
+            <div class="btnRow">
+              <button id="brickRandomize" class="secondary" title="Randomize doping labels">Randomize doping</button>
+              <button id="brickCompute" title="Compute counts + analytics">Compute plan + analytics</button>
+              <button id="brickAnimateBest" title="Animate best (min-switch) plan">Animate best plan</button>
+              <button id="brickAnimateRandom" class="secondary" title="Animate one random feasible plan">Animate random plan</button>
+              <button id="brickPause" class="ghost" title="Pause/resume animation">Pause</button>
+              <button id="brickReset" class="ghost" title="Reset build view">Reset</button>
+            </div>
+
+            <div>
+              <h3 style="margin-top:.6rem;">Doping per course</h3>
+              <p class="muted" style="margin:.2rem 0 .6rem 0;">
+                D0: next direction free, cure = base. · D1: next direction must stay same, cure = 0. · D2: next direction must flip, cure = base + extra.
+              </p>
+              <div id="dopingGrid" class="dopingGrid" aria-label="Doping grid"></div>
+            </div>
+
+            <h3>Analytics</h3>
+            <div id="brickStats" class="stats" aria-label="Brick stats"></div>
+
+            <details>
+              <summary>Best plan preview (direction sequence)</summary>
+              <div class="inner">
+                <div id="brickPlanPreview" class="mono" style="white-space:pre-wrap;"></div>
+              </div>
+            </details>
+
+            <h3>Event log</h3>
+            <div id="brickLog" class="log" aria-label="Brick event log">Click “Compute plan + analytics”.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- B. Circle Slot -->
+      <section class="card" aria-label="Viewing-window precursor">
+        <div class="inline" style="justify-content:space-between; align-items:flex-start;">
+          <div>
+            <h2 style="margin-bottom:.25rem;">B. Viewing Window — Precursor Model (Partial Observability)</h2>
+            <p class="muted" style="margin:0;">
+              A point moves around a circle at constant angular speed. You only “see” it through a short arc (“the slot”).
+              This is the planning analogue of checkpoints, dashboards, and status meetings: you don’t observe the whole state, only a slice.
+            </p>
+          </div>
+          <div class="inline" style="gap:.4rem;">
+            <span class="pill"><span style="color:var(--accent);">●</span> slot</span>
+            <span class="pill"><span style="color:var(--good);">●</span> visible</span>
+            <span class="pill"><span style="color:#9ca3af;">●</span> hidden</span>
+          </div>
+        </div>
+
+        <div class="grid2 flip" style="margin-top: .85rem;">
+          <div class="controls">
+            <div class="controlRow">
+              <label>Radius r
+                <input id="circR" type="number" min="20" max="500" value="200">
+              </label>
+              <label>Initial angle θ₀ (deg)
+                <input id="circTheta0" type="number" min="-9999" max="9999" value="0">
+              </label>
+              <label>Angular speed ω (deg/s)
+                <input id="circOmega" type="number" min="-2000" max="2000" value="60">
+              </label>
+              <label>Slot center φ (deg)
+                <input id="circPhi" type="number" min="-9999" max="9999" value="90">
+              </label>
+              <label>Slot half-width Δ (deg)
+                <input id="circDelta" type="number" min="1" max="180" value="20">
+              </label>
+              <label>Duration T (s)
+                <input id="circT" type="number" min="0.1" max="300" step="0.1" value="8">
+              </label>
+            </div>
+
+            <div class="btnRow">
+              <button id="circCompute">Compute windows</button>
+              <button id="circAnimate" class="secondary">Animate</button>
+              <button id="circPause" class="ghost">Pause</button>
+              <button id="circReset" class="ghost">Reset</button>
+            </div>
+
+            <h3>Outputs (what the “manager” sees)</h3>
+            <div id="circleStats" class="stats"></div>
+
+            <div style="margin-top:.6rem;">
+              <div class="muted" style="font-size:.85rem; margin-bottom:.35rem;">
+                Visibility windows (entry/exit times) — analytic, not just sampled:
+              </div>
+              <div style="overflow:auto; border:1px solid var(--border); border-radius:12px;">
+                <table aria-label="Visibility table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>t in (s)</th>
+                      <th>t out (s)</th>
+                      <th>duration</th>
+                      <th>θ in</th>
+                      <th>θ out</th>
+                    </tr>
+                  </thead>
+                  <tbody id="circleTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <h3>Observer log</h3>
+            <div id="circleLog" class="log">Click “Compute windows”.</div>
+          </div>
+
+          <div class="canvasGrid">
+            <div class="canvasWrap" aria-label="Circle canvas"><canvas id="circleCanvas"></canvas></div>
+            <div class="canvasWrap wide" aria-label="Visibility timeline"><canvas id="circleTimeline"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Formal backbone -->
+      <section class="card" aria-label="Formal backbone">
+        <h2>Formal backbone (kept short, but correct)</h2>
+        <p class="muted" style="margin:.2rem 0 .65rem 0;">
+          The demo uses the “system-as-lens” viewpoint: a system has <b>state</b>, <b>outputs</b> it exposes, and <b>inputs/parameters</b> that affect how it evolves.
+          A lens is exactly the tool that wires “what flows forward” and “what is set from the outside” in a composable way.
+        </p>
+
+        <div class="grid2" style="margin-top:.65rem;">
+          <div>
+            <h3>Lens shape (Myers notation)</h3>
+            <div class="muted">
+              A lens <span class="mono">(f♯, f)</span> from <span class="mono">(A− / A+)</span> to <span class="mono">(B− / B+)</span> consists of:
+              <ul style="margin:.35rem 0 0 1.1rem;">
+                <li><span class="mono">f : A+ → B+</span> (passforward)</li>
+                <li><span class="mono">f♯ : A+ × B− → A−</span> (passback)</li>
+              </ul>
+              In words: you pass <b>what’s visible downstream</b>, and you pass <b>parameter-setting / constraints upstream</b>, allowed to depend on what will flow downstream.
+            </div>
+
+            <h3>Systems as lenses</h3>
+            <div class="muted">
+              A (deterministic) system can be packaged as a lens
+              <div class="mono" style="margin:.25rem 0 .25rem 0;">
+                (update, expose) : (State / State) ⇆ (In / Out)
+              </div>
+              and a (differential) system as
+              <div class="mono" style="margin:.25rem 0 .25rem 0;">
+                (update, expose) : (TState / State) ⇆ (In / Out)
+              </div>
+              where <span class="mono">expose</span> tells you what’s visible (outputs) and <span class="mono">update</span> tells you how state changes given chosen inputs/parameters.
+            </div>
+          </div>
+
+          <div>
+            <h3>How B is a precursor to A</h3>
+            <p class="muted" style="margin:.2rem 0 .6rem 0;">
+              In B, the “real state” is always moving, but you only observe it when it passes the slot. That separation of
+              <b>full state vs. observed output</b> is exactly what you need before you tackle A, where constraints (doping/curing/setup)
+              mean you can’t freely choose the next action at every step.
+            </p>
+
+            <div class="svgBox" aria-label="Wiring diagram">
+              <svg viewBox="0 0 980 220" role="img" aria-label="Wiring diagram: base circle dynamics composed with slot observer">
+                <defs>
+                  <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#111827"></path>
+                  </marker>
+                </defs>
+
+                <!-- Top flow -->
+                <text x="18" y="30" font-size="14" fill="#111827">State: θ</text>
+                <line x1="18" y1="50" x2="305" y2="50" stroke="#111827" stroke-width="2" marker-end="url(#arr)"/>
+                <rect x="305" y="20" width="260" height="60" rx="12" fill="#eef2ff" stroke="#c7d2fe"/>
+                <text x="320" y="48" font-size="14" fill="#111827">Base dynamics: expose θ, update via ω</text>
+                <line x1="565" y1="50" x2="725" y2="50" stroke="#111827" stroke-width="2" marker-end="url(#arr)"/>
+                <rect x="725" y="20" width="220" height="60" rx="12" fill="#ecfeff" stroke="#a5f3fc"/>
+                <text x="740" y="42" font-size="14" fill="#111827">Slot observer lens</text>
+                <text x="740" y="60" font-size="12" fill="#374151">θ ↦ θ if visible else ⊥</text>
+
+                <line x1="945" y1="50" x2="965" y2="50" stroke="#111827" stroke-width="2" marker-end="url(#arr)"/>
+                <text x="882" y="30" font-size="14" fill="#111827">Output: θ or ⊥</text>
+
+                <!-- Bottom passback -->
+                <text x="18" y="145" font-size="14" fill="#6b7280">Input parameter</text>
+                <line x1="965" y1="165" x2="725" y2="165" stroke="#6b7280" stroke-width="2" marker-end="url(#arr)"/>
+                <text x="848" y="190" font-size="12" fill="#6b7280">passback (keeps ω unchanged)</text>
+                <line x1="725" y1="165" x2="305" y2="165" stroke="#6b7280" stroke-width="2" marker-end="url(#arr)"/>
+                <line x1="305" y1="165" x2="18" y2="165" stroke="#6b7280" stroke-width="2" marker-end="url(#arr)"/>
+                <text x="18" y="190" font-size="12" fill="#6b7280">ω (deg/s)</text>
+
+                <text x="18" y="212" font-size="12" fill="#6b7280">
+                  Composition intuition: base system outputs θ; observer lens transforms the interface to output “seen or not seen”.
+                </text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Export -->
+      <section class="card" aria-label="Export">
+        <h2>Export (optional)</h2>
+        <p class="muted" style="margin:.2rem 0 .65rem 0;">
+          Use this to copy results into another tool (spreadsheets, project dashboards, simulations).
+        </p>
+        <div class="btnRow">
+          <button id="exportBrick" class="secondary">Export brick analytics JSON</button>
+          <button id="exportCircle" class="secondary">Export visibility windows JSON</button>
+          <button id="clearExport" class="ghost">Clear</button>
+          <span class="pill">Tip: copy from the box</span>
+        </div>
+        <label style="margin-top:.6rem;">
+          Export data
+          <textarea id="exportBox" style="width:100%; min-height:10rem; padding:.6rem .7rem; border-radius:12px; border:1px solid var(--border); font-family:var(--mono); font-size:.82rem;"></textarea>
+        </label>
+      </section>
+
+      <section class="card" aria-label="Footer">
+        <div class="muted" style="font-size:.85rem;">
+          Controls: <span class="kbd">Compute</span> updates stats; <span class="kbd">Animate</span> shows one trajectory.
+          If anything fails to load, you’ll see a fallback diagram and a toast.
+        </div>
+      </section>
+    </main>
+
+    <div id="toastHost" class="toastHost" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+<script>
+(function(){
+  const app = document.getElementById('app');
+  const toastHost = document.getElementById('toastHost');
+
+  function toast(msg, type='info', detail=''){
+    try{
+      const t = document.createElement('div');
+      t.className = 'toast' + (type==='warn' ? ' warn' : type==='err' ? ' err' : '');
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      const m = document.createElement('div');
+      m.className = 'msg';
+      m.textContent = msg;
+      if(detail){
+        const s = document.createElement('small');
+        s.textContent = detail;
+        m.appendChild(s);
+      }
+      t.appendChild(dot); t.appendChild(m);
+      toastHost.appendChild(t);
+      setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(6px)'; }, 2500);
+      setTimeout(()=>{ if(t.parentNode) t.parentNode.removeChild(t); }, 3200);
+    }catch(_e){}
+  }
+
+  function fallback(reason){
+    console.error("Fallback:", reason);
+    window.__canvasStatus = 'fallback';
+    toast("Fallback mode: interactive rendering unavailable.", 'err', String(reason || 'unknown'));
+
+    // Minimal static replacement to avoid a broken page:
+    const main = app.querySelector('main');
+    if(!main) return;
+    const box = document.createElement('div');
+    box.className = 'card fallbackBox';
+    box.innerHTML = `
+      <h2>Fallback view</h2>
+      <p class="muted">
+        The interactive components did not initialize. You can still read the model description above.
+        Try reloading or using a modern browser with Canvas enabled.
+      </p>
+      <div class="svgBox">
+        <svg viewBox="0 0 980 220" role="img" aria-label="Fallback diagram">
+          <defs>
+            <marker id="arr2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#111827"></path>
+            </marker>
+          </defs>
+          <text x="20" y="35" font-size="16" fill="#111827">Project as state space</text>
+          <rect x="20" y="55" width="300" height="60" rx="12" fill="#eef2ff" stroke="#c7d2fe"/>
+          <text x="35" y="90" font-size="14" fill="#111827">Brickwork states</text>
+          <line x1="320" y1="85" x2="520" y2="85" stroke="#111827" stroke-width="2" marker-end="url(#arr2)"/>
+          <rect x="520" y="55" width="420" height="60" rx="12" fill="#ecfeff" stroke="#a5f3fc"/>
+          <text x="535" y="80" font-size="14" fill="#111827">Observer window model → partial visibility</text>
+          <text x="20" y="150" font-size="12" fill="#6b7280">
+            When the interactive demo loads, it animates trajectories and computes feasible plans.
+          </text>
+        </svg>
+      </div>
+    `;
+    main.insertBefore(box, main.firstChild);
+  }
+
+  // Visibility watchdog (as specified)
+  (function watchdog(){
+    const timeout = parseInt(app.getAttribute('data-timeout') || '3000', 10);
+    const start = performance.now();
+    function check(){
+      const ok = app.querySelector('[data-smoke="ok"]');
+      if(ok) return;
+      if(performance.now() - start > timeout){
+        fallback('timeout');
+        return;
+      }
+      setTimeout(check, 500);
+    }
+    setTimeout(check, 500);
+  })();
+
+  // Utilities
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const mod = (a, n) => ((a % n) + n) % n;
+  const deg2rad = (d) => d * Math.PI / 180;
+  const rad2deg = (r) => r * 180 / Math.PI;
+
+  function fmt(n, digits=2){
+    if(!isFinite(n)) return '—';
+    return Number(n).toFixed(digits);
+  }
+
+  // HiDPI canvas helper
+  function attachCanvas(canvas, render){
+    const ctx = canvas.getContext('2d');
+    if(!ctx) throw new Error("Canvas 2D context unavailable");
+    let dims = {w: 1, h: 1, dpr: 1};
+
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(1, rect.width);
+      const h = Math.max(1, rect.height);
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dims = {w, h, dpr};
+      render(ctx, dims);
+    }
+
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+    window.addEventListener('resize', resize, {passive:true});
+    resize();
+
+    return {
+      ctx,
+      getDims: ()=>dims,
+      render: ()=>render(ctx, dims),
+      destroy: ()=>{ ro.disconnect(); window.removeEventListener('resize', resize); }
+    };
+  }
+
+  // ==========================
+  // A) Brickwork module
+  // ==========================
+  const Brick = (function(){
+    // DOM
+    const el = {
+      N: document.getElementById('brickN'),
+      B: document.getElementById('brickB'),
+      offset: document.getElementById('brickOffset'),
+      switchPenalty: document.getElementById('brickSwitchPenalty'),
+      baseCure: document.getElementById('brickBaseCure'),
+      slowExtra: document.getElementById('brickSlowExtra'),
+      includeFinalCure: document.getElementById('brickIncludeFinalCure'),
+      dopingGrid: document.getElementById('dopingGrid'),
+      stats: document.getElementById('brickStats'),
+      log: document.getElementById('brickLog'),
+      planPreview: document.getElementById('brickPlanPreview'),
+      btnRandom: document.getElementById('brickRandomize'),
+      btnCompute: document.getElementById('brickCompute'),
+      btnAnimBest: document.getElementById('brickAnimateBest'),
+      btnAnimRand: document.getElementById('brickAnimateRandom'),
+      btnPause: document.getElementById('brickPause'),
+      btnReset: document.getElementById('brickReset'),
+      exportBrick: document.getElementById('exportBrick')
+    };
+
+    const canvasCtrl = attachCanvas(document.getElementById('brickCanvas'), renderBrick);
+    const histCtrl = attachCanvas(document.getElementById('brickHist'), renderHist);
+
+    const model = {
+      N: 8,
+      B: 48,
+      offset: 0,
+      doping: [],
+      baseCure: 1,
+      slowExtra: 2,
+      switchPenalty: 2,
+      includeFinalCure: true
+    };
+
+    const view = {
+      built: [],
+      activeCourse: -1,
+      activeDir: 1,
+      activeBrick: 0,
+      overlay: null, // {label, remainingSteps}
+      planDirs: null
+    };
+
+    const anim = {
+      running: false,
+      paused: false,
+      raf: null,
+      plan: null,
+      cursor: {course:0, brick:0},
+      stepPhase: 'idle', // build | setup | cure | idle
+      stepRemaining: 0,
+      lastTs: 0
+    };
+
+    let latestStats = null;
+
+    function log(msg){
+      el.log.textContent += msg + "\n";
+      el.log.scrollTop = el.log.scrollHeight;
+    }
+
+    function resetLog(prefix=""){
+      el.log.textContent = prefix ? prefix + "\n" : "";
+    }
+
+    function cureStepsForCourse(d){
+      if(d === 1) return 0; // D1 fast
+      if(d === 2) return model.baseCure + model.slowExtra; // D2 slow
+      return model.baseCure; // D0 standard
+    }
+
+    // Doping influences the NEXT direction constraint:
+    // After finishing course k with direction dir_k:
+    // D0 => next dir free, D1 => next dir same, D2 => next dir flips.
+    function allowedNextDirs(dirCurrent, dopingCurrent){
+      if(dopingCurrent === 1) return [dirCurrent];
+      if(dopingCurrent === 2) return [-dirCurrent];
+      return [1, -1];
+    }
+
+    function normalizeModelFromUI(){
+      const N = clamp(parseInt(el.N.value || '8', 10), 1, 40);
+      const B = clamp(parseInt(el.B.value || '48', 10), 6, 240);
+      el.offset.max = String(B-1);
+      const offset = clamp(parseInt(el.offset.value || '0', 10), 0, B-1);
+
+      model.N = N;
+      model.B = B;
+      model.offset = offset;
+      model.baseCure = clamp(parseInt(el.baseCure.value || '0', 10), 0, 20);
+      model.slowExtra = clamp(parseInt(el.slowExtra.value || '0', 10), 0, 20);
+      model.switchPenalty = clamp(parseInt(el.switchPenalty.value || '0', 10), 0, 20);
+      model.includeFinalCure = !!el.includeFinalCure.checked;
+
+      // Ensure doping array and grid are aligned
+      ensureDopingGrid();
+      model.doping = readDopingGrid();
+    }
+
+    function ensureDopingGrid(){
+      const N = clamp(parseInt(el.N.value || '8', 10), 1, 40);
+      // Build grid if needed
+      const existing = el.dopingGrid.querySelectorAll('select').length;
+      if(existing === N) return;
+
+      el.dopingGrid.innerHTML = '';
+      for(let i=0;i<N;i++){
+        const cell = document.createElement('div');
+        cell.className = 'dopingCell';
+        const small = document.createElement('small');
+        small.textContent = `Course ${i+1}`;
+        const sel = document.createElement('select');
+        sel.innerHTML = `
+          <option value="0">D0 — standard</option>
+          <option value="1">D1 — fast-cure</option>
+          <option value="2">D2 — slow-cure</option>
+        `;
+        // deterministic “pleasant” pattern
+        const val = (i%6===0 ? 2 : (i%6===1 ? 1 : 0));
+        sel.value = String(val);
+        sel.dataset.idx = String(i);
+        cell.appendChild(small);
+        cell.appendChild(sel);
+        el.dopingGrid.appendChild(cell);
+      }
+    }
+
+    function readDopingGrid(){
+      const sels = Array.from(el.dopingGrid.querySelectorAll('select'));
+      return sels.map(s => clamp(parseInt(s.value,10), 0, 2));
+    }
+
+    function randomizeDoping(){
+      ensureDopingGrid();
+      const sels = Array.from(el.dopingGrid.querySelectorAll('select'));
+      sels.forEach(s=>{
+        const r = Math.random();
+        s.value = (r<0.34 ? '0' : r<0.67 ? '1' : '2');
+      });
+      toast("Doping randomized.", 'info');
+      resetBuildView();
+      compute();
+    }
+
+    function computeAnalytics(){
+      const N = model.N;
+      const doping = model.doping.slice();
+
+      // Histogram of switch counts across ALL feasible direction sequences.
+      // DP over courses and last dir.
+      // dp[dir] is object: switches -> count
+      let dp = {
+        1: {0: 1},
+        [-1]: {0: 1}
+      };
+
+      for(let k=1; k<N; k++){
+        const dopingPrev = doping[k-1]; // course k (1-based) determines constraint to course k+1
+        const next = { 1: {}, [-1]: {} };
+
+        for(const dirPrev of [1, -1]){
+          const map = dp[dirPrev];
+          const allowed = allowedNextDirs(dirPrev, dopingPrev);
+
+          for(const dirNext of allowed){
+            for(const sStr in map){
+              const s = parseInt(sStr, 10);
+              const s2 = s + (dirNext !== dirPrev ? 1 : 0);
+              next[dirNext][s2] = (next[dirNext][s2] || 0) + map[sStr];
+            }
+          }
+        }
+        dp = next;
+      }
+
+      const hist = Array(N).fill(0); // switches 0..N-1
+      for(const dir of [1, -1]){
+        for(const sStr in dp[dir]){
+          const s = parseInt(sStr, 10);
+          if(s>=0 && s<hist.length) hist[s] += dp[dir][sStr];
+        }
+      }
+      const totalPlans = hist.reduce((a,b)=>a+b,0);
+
+      let minSw = null, maxSw = null, sumSw = 0;
+      for(let s=0; s<hist.length; s++){
+        if(hist[s] > 0 && minSw === null) minSw = s;
+        if(hist[s] > 0) maxSw = s;
+        sumSw += s * hist[s];
+      }
+      const meanSw = totalPlans ? (sumSw / totalPlans) : 0;
+
+      // Base time in steps (build + cures), excluding switch penalty.
+      const buildSteps = N * model.B;
+      let cureTotal = 0;
+      for(let k=0; k<N; k++){
+        if(!model.includeFinalCure && k === N-1) break;
+        cureTotal += cureStepsForCourse(doping[k]);
+      }
+      const baseSteps = buildSteps + cureTotal;
+
+      // Total time distribution: baseSteps + switchPenalty*s
+      const switchPenalty = model.switchPenalty;
+
+      // Best plan = one that achieves minSw (min total time).
+      const best = computeBestPlanMinSwitches();
+
+      // Choice points: initial dir + each D0 among courses 1..N-1
+      let choicePoints = 1;
+      for(let k=0; k<N-1; k++){
+        if(doping[k] === 0) choicePoints++;
+      }
+
+      return {
+        N, B: model.B,
+        doping,
+        totalPlans,
+        choicePoints,
+        histSwitches: hist,
+        minSwitches: minSw ?? 0,
+        maxSwitches: maxSw ?? 0,
+        meanSwitches: meanSw,
+        baseSteps,
+        buildSteps,
+        cureTotal,
+        switchPenalty,
+        bestPlan: best
+      };
+    }
+
+    function computeBestPlanMinSwitches(){
+      const N = model.N;
+      const doping = model.doping;
+
+      // dpMin[k][dirIdx] where dirIdx 0->-1, 1->+1
+      // store predecessor to reconstruct
+      const INF = 1e9;
+      const dpMin = Array.from({length:N}, ()=>[INF, INF]);
+      const prev = Array.from({length:N}, ()=>[null, null]); // {dirIdxPrev}
+
+      // course 1: either dir, 0 switches
+      dpMin[0][0] = 0; // -1
+      dpMin[0][1] = 0; // +1
+
+      for(let k=0; k<N-1; k++){
+        const dopingK = doping[k];
+        for(const dirPrev of [-1, 1]){
+          const dirPrevIdx = (dirPrev === -1 ? 0 : 1);
+          const cur = dpMin[k][dirPrevIdx];
+          if(cur >= INF) continue;
+
+          const allowed = allowedNextDirs(dirPrev, dopingK);
+          for(const dirNext of allowed){
+            const dirNextIdx = (dirNext === -1 ? 0 : 1);
+            const cost = cur + (dirNext !== dirPrev ? 1 : 0);
+            if(cost < dpMin[k+1][dirNextIdx]){
+              dpMin[k+1][dirNextIdx] = cost;
+              prev[k+1][dirNextIdx] = dirPrevIdx;
+            }
+          }
+        }
+      }
+
+      // choose best ending dir
+      let endIdx = dpMin[N-1][0] <= dpMin[N-1][1] ? 0 : 1;
+      let minSwitches = dpMin[N-1][endIdx];
+      if(minSwitches >= INF) { // shouldn't happen
+        endIdx = 1; minSwitches = 0;
+      }
+
+      const dirs = Array(N).fill(1);
+      let curIdx = endIdx;
+      for(let k=N-1; k>=0; k--){
+        dirs[k] = (curIdx === 0 ? -1 : 1);
+        const p = prev[k][curIdx];
+        if(p === null) break;
+        curIdx = p;
+      }
+
+      return { dirs, minSwitches };
+    }
+
+    function renderStats(stats){
+      const timeMin = stats.baseSteps + stats.switchPenalty * stats.minSwitches;
+      const timeMean = stats.baseSteps + stats.switchPenalty * stats.meanSwitches;
+      const timeMax = stats.baseSteps + stats.switchPenalty * stats.maxSwitches;
+
+      el.stats.innerHTML = '';
+      const items = [
+        {k:"Feasible plans", v: String(stats.totalPlans), s:`Choice points: ${stats.choicePoints}`},
+        {k:"Switches (min / mean / max)", v:`${stats.minSwitches} / ${fmt(stats.meanSwitches,2)} / ${stats.maxSwitches}`, s:`Penalty per switch: ${stats.switchPenalty} step(s)`},
+        {k:"Base time (build+cure)", v:`${stats.baseSteps} steps`, s:`Build: ${stats.buildSteps}, Cure: ${stats.cureTotal}`},
+        {k:"Total time (min / mean / max)", v:`${fmt(timeMin,1)} / ${fmt(timeMean,1)} / ${fmt(timeMax,1)}`, s:`Total = base + penalty×switches`}
+      ];
+      for(const it of items){
+        const div = document.createElement('div');
+        div.className = 'stat';
+        div.innerHTML = `<div class="k">${it.k}</div><div class="v">${it.v}</div><div class="s">${it.s}</div>`;
+        el.stats.appendChild(div);
+      }
+    }
+
+    function planToString(dirs){
+      const arrows = dirs.map(d => d===1 ? '↻' : '↺');
+      // chunk for readability
+      const parts = [];
+      for(let i=0;i<arrows.length;i++){
+        parts.push(`${String(i+1).padStart(2,'0')}${arrows[i]}`);
+      }
+      return parts.join('  ');
+    }
+
+    function updatePlanPreview(stats){
+      if(!stats || !stats.bestPlan) return;
+      const {dirs, minSwitches} = stats.bestPlan;
+      el.planPreview.textContent =
+`Best plan (min switches = ${minSwitches}):
+
+${planToString(dirs)}
+
+Legend: ↻ = clockwise, ↺ = counter-clockwise`;
+    }
+
+    function compute(){
+      normalizeModelFromUI();
+      latestStats = computeAnalytics();
+      renderStats(latestStats);
+      updatePlanPreview(latestStats);
+
+      // histogram render depends on latestStats
+      histCtrl.render();
+
+      resetLog("Computed analytics.");
+      log(`N=${model.N}, B=${model.B}, offset=${model.offset}`);
+      log(`Doping: ${model.doping.map((d,i)=>`C${i+1}:D${d}`).join(' ')}`);
+      log(`Plans=${latestStats.totalPlans}, minSwitches=${latestStats.minSwitches}, meanSwitches=${fmt(latestStats.meanSwitches,2)}`);
+
+      // show best plan in view (without building it)
+      view.planDirs = latestStats.bestPlan.dirs.slice();
+      canvasCtrl.render();
+      toast("Brick analytics updated.", 'info');
+    }
+
+    function resetBuildView(){
+      view.built = Array(model.N).fill(0);
+      view.activeCourse = -1;
+      view.activeDir = 1;
+      view.activeBrick = 0;
+      view.overlay = null;
+      canvasCtrl.render();
+      histCtrl.render();
+    }
+
+    function stopAnim(){
+      anim.running = false;
+      anim.paused = false;
+      anim.stepPhase = 'idle';
+      anim.stepRemaining = 0;
+      if(anim.raf) cancelAnimationFrame(anim.raf);
+      anim.raf = null;
+      el.btnPause.textContent = "Pause";
+    }
+
+    function makeRandomPlan(){
+      const N = model.N;
+      const doping = model.doping;
+      const dirs = Array(N).fill(1);
+      dirs[0] = Math.random() < 0.5 ? -1 : 1;
+      for(let k=0; k<N-1; k++){
+        const allowed = allowedNextDirs(dirs[k], doping[k]);
+        dirs[k+1] = allowed[Math.floor(Math.random() * allowed.length)];
+      }
+      return dirs;
+    }
+
+    function animatePlan(dirs, label){
+      stopAnim();
+      resetBuildView();
+      resetLog(`Animating: ${label}`);
+      log(planToString(dirs));
+
+      anim.plan = dirs.slice();
+      anim.running = true;
+      anim.paused = false;
+      anim.cursor = {course:0, brick:0};
+      anim.stepPhase = 'build';
+      anim.stepRemaining = 0;
+      anim.lastTs = performance.now();
+
+      // kick off
+      toast(`Animating ${label}.`, 'info');
+      anim.raf = requestAnimationFrame(tick);
+    }
+
+    function tick(ts){
+      if(!anim.running) return;
+      if(anim.paused){
+        anim.lastTs = ts;
+        anim.raf = requestAnimationFrame(tick);
+        return;
+      }
+      const dt = ts - anim.lastTs;
+      anim.lastTs = ts;
+
+      // Control speed in ms
+      const msPerBrick = 18;     // smooth enough
+      const msPerStep = 220;     // dwell step length
+
+      const N = model.N;
+      const B = model.B;
+
+      if(anim.stepPhase === 'build'){
+        const k = anim.cursor.course;
+        const dir = anim.plan[k];
+        view.activeCourse = k;
+        view.activeDir = dir;
+
+        // advance brick with time
+        // we use a simple accumulator by storing fractional progress as stepRemaining negative
+        if(anim.stepRemaining <= 0) anim.stepRemaining = msPerBrick;
+        anim.stepRemaining -= dt;
+
+        if(anim.stepRemaining <= 0){
+          // place one brick
+          if(view.built[k] < B){
+            view.built[k] += 1;
+            view.activeBrick = view.built[k];
+          }
+
+          // course finished?
+          if(view.built[k] >= B){
+            log(`Built course ${k+1} (${dir===1?'CW':'CCW'})`);
+            // decide next phase: setup between this and next course, then cure
+            const isLast = (k === N-1);
+
+            // setup depends on direction change to next course
+            if(!isLast){
+              const dirNext = anim.plan[k+1];
+              if(dirNext !== dir && model.switchPenalty > 0){
+                anim.stepPhase = 'setup';
+                anim.stepRemaining = model.switchPenalty; // steps
+                view.overlay = {label: `Setup (switch dir)`, remainingSteps: anim.stepRemaining};
+              } else {
+                anim.stepPhase = 'cure';
+                anim.stepRemaining = cureStepsForCourse(model.doping[k]);
+                view.overlay = anim.stepRemaining>0 ? {label: `Curing (after course ${k+1})`, remainingSteps: anim.stepRemaining} : null;
+              }
+            } else {
+              // last course
+              if(model.includeFinalCure){
+                anim.stepPhase = 'cure';
+                anim.stepRemaining = cureStepsForCourse(model.doping[k]);
+                view.overlay = anim.stepRemaining>0 ? {label: `Final cure`, remainingSteps: anim.stepRemaining} : null;
+              } else {
+                anim.stepPhase = 'done';
+              }
+            }
+          }
+        }
+      }
+      else if(anim.stepPhase === 'setup'){
+        if(anim.stepRemaining <= 0){ anim.stepRemaining = 0; }
+        // count down in msPerStep steps
+        const steps = anim.stepRemaining;
+        if(steps > 0){
+          // step timer
+          if(!anim._stepClock) anim._stepClock = msPerStep;
+          anim._stepClock -= dt;
+          if(anim._stepClock <= 0){
+            anim._stepClock = msPerStep;
+            anim.stepRemaining -= 1;
+            if(view.overlay) view.overlay.remainingSteps = anim.stepRemaining;
+            if(anim.stepRemaining <= 0){
+              anim._stepClock = null;
+              // after setup go to cure of just finished course
+              const k = anim.cursor.course;
+              anim.stepPhase = 'cure';
+              anim.stepRemaining = cureStepsForCourse(model.doping[k]);
+              view.overlay = anim.stepRemaining>0 ? {label: `Curing (after course ${k+1})`, remainingSteps: anim.stepRemaining} : null;
+              if(anim.stepRemaining>0) log(`Setup complete. Starting cure.`);
+            }
+          }
+        }
+      }
+      else if(anim.stepPhase === 'cure'){
+        const steps = anim.stepRemaining;
+        if(steps > 0){
+          if(!anim._stepClock) anim._stepClock = msPerStep;
+          anim._stepClock -= dt;
+          if(anim._stepClock <= 0){
+            anim._stepClock = msPerStep;
+            anim.stepRemaining -= 1;
+            if(view.overlay) view.overlay.remainingSteps = anim.stepRemaining;
+            if(anim.stepRemaining <= 0){
+              anim._stepClock = null;
+              view.overlay = null;
+              const k = anim.cursor.course;
+              // advance to next course, unless last finished
+              if(k < N-1){
+                anim.cursor.course += 1;
+                anim.cursor.brick = 0;
+                anim.stepPhase = 'build';
+              } else {
+                anim.stepPhase = 'done';
+              }
+              log(`Cure complete.`);
+            }
+          }
+        } else {
+          // no cure -> move on
+          view.overlay = null;
+          const k = anim.cursor.course;
+          if(k < N-1){
+            anim.cursor.course += 1;
+            anim.stepPhase = 'build';
+          } else {
+            anim.stepPhase = 'done';
+          }
+        }
+      }
+
+      if(anim.stepPhase === 'done'){
+        view.activeCourse = -1;
+        view.overlay = null;
+        canvasCtrl.render();
+        log("Done.");
+        toast("Brick animation complete.", 'info');
+        stopAnim();
+        return;
+      }
+
+      canvasCtrl.render();
+      anim.raf = requestAnimationFrame(tick);
+    }
+
+    function togglePause(){
+      if(!anim.running) return;
+      anim.paused = !anim.paused;
+      el.btnPause.textContent = anim.paused ? "Resume" : "Pause";
+      toast(anim.paused ? "Paused." : "Resumed.", 'info');
+    }
+
+    function resetAll(){
+      stopAnim();
+      normalizeModelFromUI();
+      resetBuildView();
+      resetLog("Reset.");
+      toast("Brick view reset.", 'info');
+    }
+
+    function colorForDoping(d){
+      if(d === 1) return '#dcfce7'; // green-ish
+      if(d === 2) return '#fee2e2'; // red-ish
+      return '#e5e7eb'; // grey-ish
+    }
+
+    function renderBrick(ctx, dims){
+      // background
+      ctx.clearRect(0,0,dims.w,dims.h);
+
+      const N = model.N;
+      const B = model.B;
+      const doping = model.doping;
+
+      const cx = dims.w/2, cy = dims.h/2;
+      const maxR = Math.min(dims.w, dims.h) * 0.44;
+      const ringW = maxR / (N + 0.8);
+
+      const seamAngle = -Math.PI/2 + (model.offset / B) * 2*Math.PI; // start at top with offset
+
+      // Title overlay
+      ctx.save();
+      ctx.fillStyle = '#111827';
+      ctx.font = `600 ${Math.max(12, dims.w*0.032)}px system-ui, sans-serif`;
+      ctx.fillText(`Brickwork`, 10, 22);
+      ctx.font = `400 ${Math.max(11, dims.w*0.024)}px system-ui, sans-serif`;
+      ctx.fillStyle = '#6b7280';
+      ctx.fillText(`N=${N}, B=${B}, offset=${model.offset}`, 10, 44);
+      ctx.restore();
+
+      // seam line
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.strokeStyle = 'rgba(37,99,235,0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.lineTo((maxR+6)*Math.cos(seamAngle), (maxR+6)*Math.sin(seamAngle));
+      ctx.stroke();
+      ctx.restore();
+
+      // Rings
+      for(let i=0; i<N; i++){
+        const rOuter = maxR - i*ringW;
+        const rInner = rOuter - ringW*0.82;
+
+        // ring fill by doping
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, rOuter, 0, 2*Math.PI);
+        ctx.arc(cx, cy, rInner, 0, 2*Math.PI, true);
+        ctx.closePath();
+        ctx.fillStyle = colorForDoping(doping[i] ?? 0);
+        ctx.fill();
+        ctx.restore();
+
+        // built bricks
+        const built = view.built[i] || 0;
+        const dir = (view.planDirs && view.planDirs[i]) ? view.planDirs[i] : 1;
+        // highlight current course direction if animating
+        const isActive = (i === view.activeCourse);
+        const alpha = isActive ? 0.95 : 0.75;
+        const ink = isActive ? '#111827' : '#1f2937';
+
+        for(let j=0; j<built; j++){
+          const t1 = j / B;
+          const t2 = (j+1) / B;
+          const a1 = seamAngle + dir * t1 * 2*Math.PI;
+          const a2 = seamAngle + dir * t2 * 2*Math.PI;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(cx, cy, rOuter, a1, a2, dir<0);
+          ctx.arc(cx, cy, rInner, a2, a1, dir>=0);
+          ctx.closePath();
+          ctx.fillStyle = ink;
+          ctx.globalAlpha = alpha;
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // ring outline
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, rOuter, 0, 2*Math.PI);
+        ctx.arc(cx, cy, rInner, 0, 2*Math.PI, true);
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(17,24,39,0.22)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+
+        // course index marker on the left
+        ctx.save();
+        ctx.fillStyle = 'rgba(17,24,39,0.85)';
+        ctx.font = `600 ${Math.max(10, dims.w*0.02)}px system-ui, sans-serif`;
+        ctx.fillText(`${i+1}`, 10, 70 + i*14);
+        ctx.restore();
+      }
+
+      // Overlay for dwell/setup
+      if(view.overlay && view.overlay.remainingSteps > 0){
+        ctx.save();
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
+        ctx.fillRect(10, dims.h - 62, dims.w-20, 52);
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+        ctx.strokeRect(10, dims.h - 62, dims.w-20, 52);
+        ctx.fillStyle = '#92400e';
+        ctx.font = `700 ${Math.max(12, dims.w*0.03)}px system-ui, sans-serif`;
+        ctx.fillText(`${view.overlay.label}`, 20, dims.h - 36);
+        ctx.font = `500 ${Math.max(11, dims.w*0.024)}px system-ui, sans-serif`;
+        ctx.fillText(`remaining: ${view.overlay.remainingSteps} step(s)`, 20, dims.h - 16);
+        ctx.restore();
+      }
+    }
+
+    function renderHist(ctx, dims){
+      ctx.clearRect(0,0,dims.w,dims.h);
+
+      // title
+      ctx.save();
+      ctx.fillStyle = '#111827';
+      ctx.font = `600 ${Math.max(12, dims.w*0.03)}px system-ui, sans-serif`;
+      ctx.fillText(`Distribution of direction switches`, 10, 22);
+      ctx.fillStyle = '#6b7280';
+      ctx.font = `400 ${Math.max(11, dims.w*0.023)}px system-ui, sans-serif`;
+      ctx.fillText(`(how many times a plan changes CW↔CCW between courses)`, 10, 42);
+      ctx.restore();
+
+      if(!latestStats){
+        ctx.save();
+        ctx.fillStyle = '#6b7280';
+        ctx.font = `500 ${Math.max(12, dims.w*0.028)}px system-ui, sans-serif`;
+        ctx.fillText(`Click “Compute plan + analytics”`, 10, dims.h/2);
+        ctx.restore();
+        return;
+      }
+
+      const hist = latestStats.histSwitches;
+      const maxCount = Math.max(1, ...hist);
+      const padL = 42, padR = 10, padT = 54, padB = 28;
+      const W = dims.w - padL - padR;
+      const H = dims.h - padT - padB;
+
+      // axes
+      ctx.save();
+      ctx.strokeStyle = 'rgba(17,24,39,0.18)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padL, padT);
+      ctx.lineTo(padL, padT + H);
+      ctx.lineTo(padL + W, padT + H);
+      ctx.stroke();
+      ctx.restore();
+
+      const nBars = hist.length;
+      const barW = W / nBars;
+
+      // bars
+      for(let i=0;i<nBars;i++){
+        const count = hist[i];
+        if(count<=0) continue;
+        const h = (count / maxCount) * H;
+        const x = padL + i*barW + barW*0.1;
+        const y = padT + (H - h);
+        const w = barW*0.8;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(37,99,235,0.75)';
+        ctx.fillRect(x, y, w, h);
+        ctx.restore();
+      }
+
+      // ticks: show 0, mid, max
+      const ticks = [0, Math.floor((nBars-1)/2), nBars-1];
+      ctx.save();
+      ctx.fillStyle = '#6b7280';
+      ctx.font = `500 ${Math.max(10, dims.w*0.02)}px system-ui, sans-serif`;
+      ticks.forEach(t=>{
+        const x = padL + t*barW + barW*0.35;
+        ctx.fillText(String(t), x, padT + H + 18);
+      });
+      ctx.fillText('switches', padL, padT + H + 18);
+      ctx.restore();
+
+      // summary
+      ctx.save();
+      ctx.fillStyle = '#111827';
+      ctx.font = `600 ${Math.max(11, dims.w*0.023)}px system-ui, sans-serif`;
+      const s = `min=${latestStats.minSwitches}, mean=${fmt(latestStats.meanSwitches,2)}, max=${latestStats.maxSwitches}`;
+      ctx.fillText(s, padL, padT - 10);
+      ctx.restore();
+    }
+
+    function exportJSON(){
+      if(!latestStats) compute();
+      const payload = {
+        model: {
+          N: model.N,
+          B: model.B,
+          offset: model.offset,
+          baseCure: model.baseCure,
+          slowExtra: model.slowExtra,
+          switchPenalty: model.switchPenalty,
+          includeFinalCure: model.includeFinalCure,
+          doping: model.doping.slice()
+        },
+        analytics: latestStats ? {
+          totalPlans: latestStats.totalPlans,
+          choicePoints: latestStats.choicePoints,
+          histSwitches: latestStats.histSwitches,
+          minSwitches: latestStats.minSwitches,
+          meanSwitches: latestStats.meanSwitches,
+          maxSwitches: latestStats.maxSwitches,
+          baseSteps: latestStats.baseSteps,
+          buildSteps: latestStats.buildSteps,
+          cureTotal: latestStats.cureTotal
+        } : null,
+        bestPlan: latestStats ? latestStats.bestPlan : null
+      };
+      return payload;
+    }
+
+    function init(){
+      normalizeModelFromUI();
+      resetBuildView();
+
+      el.btnRandom.onclick = randomizeDoping;
+      el.btnCompute.onclick = compute;
+      el.btnAnimBest.onclick = ()=>{
+        normalizeModelFromUI();
+        if(!latestStats) compute();
+        const dirs = latestStats.bestPlan.dirs.slice();
+        view.planDirs = dirs.slice();
+        animatePlan(dirs, "best plan");
+      };
+      el.btnAnimRand.onclick = ()=>{
+        normalizeModelFromUI();
+        const dirs = makeRandomPlan();
+        view.planDirs = dirs.slice();
+        animatePlan(dirs, "random plan");
+      };
+      el.btnPause.onclick = togglePause;
+      el.btnReset.onclick = resetAll;
+
+      // Recompute on input changes (debounced)
+      let t = null;
+      function onChange(){
+        clearTimeout(t);
+        t = setTimeout(()=>{
+          try{
+            stopAnim();
+            normalizeModelFromUI();
+            resetBuildView();
+            compute();
+          }catch(e){
+            console.error(e);
+            toast("Brick update failed.", 'err', e.message || String(e));
+          }
+        }, 120);
+      }
+      [el.N, el.B, el.offset, el.switchPenalty, el.baseCure, el.slowExtra, el.includeFinalCure].forEach(inp=>{
+        inp.addEventListener('change', onChange);
+      });
+      el.dopingGrid.addEventListener('change', onChange);
+
+      // Initial compute
+      compute();
+
+      return { exportJSON };
+    }
+
+    return { init, exportJSON: ()=>exportJSON() };
+  })();
+
+  // ==========================
+  // B) Circle + slot module
+  // ==========================
+  const Circle = (function(){
+    const el = {
+      r: document.getElementById('circR'),
+      theta0: document.getElementById('circTheta0'),
+      omega: document.getElementById('circOmega'),
+      phi: document.getElementById('circPhi'),
+      delta: document.getElementById('circDelta'),
+      T: document.getElementById('circT'),
+
+      btnCompute: document.getElementById('circCompute'),
+      btnAnim: document.getElementById('circAnimate'),
+      btnPause: document.getElementById('circPause'),
+      btnReset: document.getElementById('circReset'),
+
+      stats: document.getElementById('circleStats'),
+      tableBody: document.getElementById('circleTableBody'),
+      log: document.getElementById('circleLog'),
+      exportCircle: document.getElementById('exportCircle')
+    };
+
+    const canvasCtrl = attachCanvas(document.getElementById('circleCanvas'), renderCircle);
+    const timelineCtrl = attachCanvas(document.getElementById('circleTimeline'), renderTimeline);
+
+    const model = {
+      r: 200,
+      theta0: 0,
+      omega: 60,
+      phi: 90,
+      delta: 20,
+      T: 8
+    };
+
+    const view = {
+      windows: [],
+      tNow: 0,
+      running: false,
+      paused: false,
+      lastTs: 0
+    };
+
+    function resetLog(prefix=""){
+      el.log.textContent = prefix ? prefix + "\n" : "";
+    }
+    function log(msg){
+      el.log.textContent += msg + "\n";
+      el.log.scrollTop = el.log.scrollHeight;
+    }
+
+    function normalizeAngleDeg(a){
+      return mod(a, 360);
+    }
+
+    function inSlot(thetaDeg){
+      const width = clamp(2*model.delta, 0, 360);
+      const start = normalizeAngleDeg(model.phi - model.delta);
+      const u = mod(thetaDeg - start, 360);
+      return u <= width + 1e-12;
+    }
+
+    function computeWindows(){
+      // Normalize from UI
+      model.r = clamp(parseFloat(el.r.value || '200'), 20, 500);
+      model.theta0 = parseFloat(el.theta0.value || '0');
+      model.omega = parseFloat(el.omega.value || '0');
+      model.phi = parseFloat(el.phi.value || '0');
+      model.delta = clamp(parseFloat(el.delta.value || '20'), 1, 180);
+      model.T = clamp(parseFloat(el.T.value || '8'), 0.1, 300);
+
+      const theta0 = model.theta0;
+      const omega = model.omega;
+      const phi = model.phi;
+      const delta = model.delta;
+      const T = model.T;
+
+      const windows = [];
+
+      if(Math.abs(omega) < 1e-12){
+        // stationary
+        const th = normalizeAngleDeg(theta0);
+        if(inSlot(th)){
+          windows.push({tIn:0, tOut:T});
+        }
+      } else if(delta >= 180){
+        windows.push({tIn:0, tOut:T});
+      } else {
+        // represent slot as intervals in [0,360)
+        const a = normalizeAngleDeg(phi - delta);
+        const b = normalizeAngleDeg(phi + delta);
+        const intervals = (a <= b) ? [[a,b]] : [[a,360],[0,b]];
+
+        const thetaA = theta0;
+        const thetaB = theta0 + omega*T;
+        const thetaMin = Math.min(thetaA, thetaB);
+        const thetaMax = Math.max(thetaA, thetaB);
+
+        for(const [l,u] of intervals){
+          const kMin = Math.floor((thetaMin - u)/360) - 1;
+          const kMax = Math.ceil((thetaMax - l)/360) + 1;
+
+          for(let k=kMin; k<=kMax; k++){
+            const t1 = (l + 360*k - theta0) / omega;
+            const t2 = (u + 360*k - theta0) / omega;
+            const tStart = Math.min(t1, t2);
+            const tEnd   = Math.max(t1, t2);
+
+            const s = Math.max(0, tStart);
+            const e = Math.min(T, tEnd);
+            if(e > s + 1e-10){
+              windows.push({tIn: s, tOut: e});
+            }
+          }
+        }
+
+        // sort + merge
+        windows.sort((p,q)=>p.tIn - q.tIn);
+        const merged = [];
+        for(const w of windows){
+          if(merged.length === 0){
+            merged.push(w);
+          } else {
+            const last = merged[merged.length-1];
+            if(w.tIn <= last.tOut + 1e-9){
+              last.tOut = Math.max(last.tOut, w.tOut);
+            } else {
+              merged.push(w);
+            }
+          }
+        }
+        windows.length = 0;
+        merged.forEach(w=>windows.push(w));
+      }
+
+      view.windows = windows;
+      view.tNow = 0;
+
+      // render output
+      renderTableAndStats();
+      timelineCtrl.render();
+      canvasCtrl.render();
+
+      resetLog("Computed analytic visibility windows.");
+      log(`θ0=${fmt(theta0,2)}°, ω=${fmt(omega,2)}°/s, slot φ=${fmt(phi,2)}° ± Δ=${fmt(delta,2)}°, T=${fmt(T,2)}s`);
+      log(`windows=${windows.length}`);
+
+      toast("Visibility windows computed.", 'info');
+    }
+
+    function renderTableAndStats(){
+      // stats
+      const T = model.T;
+      let visibleDur = 0;
+      for(const w of view.windows) visibleDur += (w.tOut - w.tIn);
+      const frac = (T>0) ? visibleDur / T : 0;
+
+      el.stats.innerHTML = '';
+      const items = [
+        {k:"# visibility windows", v:String(view.windows.length), s:"How many times the object is observable"},
+        {k:"Visible time", v:`${fmt(visibleDur,3)} s`, s:`Fraction of horizon: ${fmt(100*frac,1)}%`},
+        {k:"Period (if ω≠0)", v: (Math.abs(model.omega)>1e-12 ? `${fmt(360/Math.abs(model.omega),3)} s` : "—"), s:"360° / |ω|"},
+        {k:"Output rule", v:"θ or ⊥", s:"⊥ during blackout"}
+      ];
+      for(const it of items){
+        const div = document.createElement('div');
+        div.className = 'stat';
+        div.innerHTML = `<div class="k">${it.k}</div><div class="v">${it.v}</div><div class="s">${it.s}</div>`;
+        el.stats.appendChild(div);
+      }
+
+      // table
+      el.tableBody.innerHTML = '';
+      view.windows.forEach((w, idx)=>{
+        const tIn = w.tIn, tOut = w.tOut;
+        const thIn = normalizeAngleDeg(model.theta0 + model.omega * tIn);
+        const thOut = normalizeAngleDeg(model.theta0 + model.omega * tOut);
+        const dur = tOut - tIn;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx+1}</td>
+          <td>${fmt(tIn,3)}</td>
+          <td>${fmt(tOut,3)}</td>
+          <td>${fmt(dur,3)}</td>
+          <td>${fmt(thIn,1)}°</td>
+          <td>${fmt(thOut,1)}°</td>
+        `;
+        el.tableBody.appendChild(tr);
+      });
+      if(view.windows.length === 0){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="6" class="muted">No visibility windows in [0, T].</td>`;
+        el.tableBody.appendChild(tr);
+      }
+    }
+
+    function renderCircle(ctx, dims){
+      ctx.clearRect(0,0,dims.w,dims.h);
+
+      // frame
+      const cx = dims.w/2, cy = dims.h/2;
+      const r = Math.min(model.r, Math.min(dims.w, dims.h)*0.46);
+
+      // slot arc
+      const phi = normalizeAngleDeg(model.phi);
+      const delta = model.delta;
+      const start = deg2rad(phi - delta);
+      const end = deg2rad(phi + delta);
+
+      // circle
+      ctx.save();
+      ctx.strokeStyle = 'rgba(17,24,39,0.95)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 2*Math.PI);
+      ctx.stroke();
+      ctx.restore();
+
+      // slot
+      ctx.save();
+      ctx.strokeStyle = 'rgba(37,99,235,0.9)';
+      ctx.lineWidth = Math.max(6, dims.w*0.01);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, start, end);
+      ctx.stroke();
+      ctx.restore();
+
+      // current theta
+      const t = view.tNow;
+      const theta = normalizeAngleDeg(model.theta0 + model.omega * t);
+      const ang = deg2rad(theta);
+      const x = cx + r * Math.cos(ang);
+      const y = cy + r * Math.sin(ang);
+      const vis = inSlot(theta);
+
+      // radius line
+      ctx.save();
+      ctx.strokeStyle = 'rgba(107,114,128,0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.restore();
+
+      // dot
+      ctx.save();
+      ctx.fillStyle = vis ? 'rgba(22,163,74,0.95)' : 'rgba(107,114,128,0.9)';
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(5, dims.w*0.012), 0, 2*Math.PI);
+      ctx.fill();
+      ctx.restore();
+
+      // header text
+      ctx.save();
+      ctx.fillStyle = '#111827';
+      ctx.font = `600 ${Math.max(12, dims.w*0.032)}px system-ui, sans-serif`;
+      ctx.fillText(`Viewing window`, 10, 22);
+      ctx.fillStyle = '#6b7280';
+      ctx.font = `400 ${Math.max(11, dims.w*0.024)}px system-ui, sans-serif`;
+      ctx.fillText(`t=${fmt(t,2)}s, θ=${fmt(theta,1)}° ${vis ? '(visible)' : '(hidden)'}`, 10, 44);
+      ctx.restore();
+    }
+
+    function renderTimeline(ctx, dims){
+      ctx.clearRect(0,0,dims.w,dims.h);
+
+      // title
+      ctx.save();
+      ctx.fillStyle = '#111827';
+      ctx.font = `600 ${Math.max(12, dims.w*0.03)}px system-ui, sans-serif`;
+      ctx.fillText(`Visibility timeline`, 10, 22);
+      ctx.fillStyle = '#6b7280';
+      ctx.font = `400 ${Math.max(11, dims.w*0.023)}px system-ui, sans-serif`;
+      ctx.fillText(`green = visible windows`, 10, 42);
+      ctx.restore();
+
+      const padL = 18, padR = 18, padT = 54, padB = 18;
+      const W = dims.w - padL - padR;
+      const H = dims.h - padT - padB;
+
+      // base bar
+      ctx.save();
+      ctx.fillStyle = 'rgba(229,231,235,1)';
+      ctx.fillRect(padL, padT + H*0.25, W, H*0.5);
+      ctx.restore();
+
+      const T = model.T;
+      if(T <= 0) return;
+
+      // windows
+      for(const w of view.windows){
+        const x1 = padL + (w.tIn / T) * W;
+        const x2 = padL + (w.tOut / T) * W;
+        ctx.save();
+        ctx.fillStyle = 'rgba(22,163,74,0.85)';
+        ctx.fillRect(x1, padT + H*0.25, Math.max(1, x2-x1), H*0.5);
+        ctx.restore();
+      }
+
+      // current time marker
+      const xNow = padL + (view.tNow / T) * W;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(17,24,39,0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xNow, padT);
+      ctx.lineTo(xNow, padT + H);
+      ctx.stroke();
+      ctx.restore();
+
+      // axis labels
+      ctx.save();
+      ctx.fillStyle = '#6b7280';
+      ctx.font = `500 ${Math.max(10, dims.w*0.02)}px system-ui, sans-serif`;
+      ctx.fillText(`0s`, padL, padT + H + 14);
+      ctx.fillText(`${fmt(T,1)}s`, padL + W - 30, padT + H + 14);
+      ctx.restore();
+    }
+
+    function stopAnim(){
+      view.running = false;
+      view.paused = false;
+      el.btnPause.textContent = 'Pause';
+    }
+
+    function togglePause(){
+      if(!view.running) return;
+      view.paused = !view.paused;
+      el.btnPause.textContent = view.paused ? 'Resume' : 'Pause';
+      toast(view.paused ? "Paused." : "Resumed.", 'info');
+    }
+
+    function animate(){
+      if(view.windows.length === 0){
+        computeWindows();
+      }
+      stopAnim();
+      view.running = true;
+      view.paused = false;
+      view.tNow = 0;
+      view.lastTs = performance.now();
+
+      resetLog("Animating (real-time scaled).");
+      toast("Animation started.", 'info');
+
+      function tick(ts){
+        if(!view.running) return;
+        if(view.paused){
+          view.lastTs = ts;
+          requestAnimationFrame(tick);
+          return;
+        }
+        const dt = (ts - view.lastTs) / 1000; // seconds
+        view.lastTs = ts;
+
+        // time scaling factor
+        const speed = 1.2; // seconds per real second
+        view.tNow += dt * speed;
+
+        if(view.tNow > model.T){
+          view.tNow = model.T;
+          canvasCtrl.render();
+          timelineCtrl.render();
+          log("Done.");
+          toast("Circle animation complete.", 'info');
+          stopAnim();
+          return;
+        }
+
+        const theta = normalizeAngleDeg(model.theta0 + model.omega * view.tNow);
+        if(inSlot(theta)){
+          log(`t=${fmt(view.tNow,2)}s, θ=${fmt(theta,1)}°`);
+        }
+
+        canvasCtrl.render();
+        timelineCtrl.render();
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function reset(){
+      stopAnim();
+      view.tNow = 0;
+      canvasCtrl.render();
+      timelineCtrl.render();
+      resetLog("Reset.");
+      toast("Circle view reset.", 'info');
+    }
+
+    function exportJSON(){
+      const payload = {
+        model: {...model},
+        windows: view.windows.map(w=>({
+          tIn: w.tIn,
+          tOut: w.tOut,
+          thetaIn: normalizeAngleDeg(model.theta0 + model.omega*w.tIn),
+          thetaOut: normalizeAngleDeg(model.theta0 + model.omega*w.tOut),
+          duration: (w.tOut - w.tIn)
+        }))
+      };
+      return payload;
+    }
+
+    function init(){
+      el.btnCompute.onclick = ()=>{ computeWindows(); };
+      el.btnAnim.onclick = ()=>{ animate(); };
+      el.btnPause.onclick = ()=>{ togglePause(); };
+      el.btnReset.onclick = ()=>{ reset(); };
+
+      // Debounce recompute on change
+      let t = null;
+      function onChange(){
+        clearTimeout(t);
+        t = setTimeout(()=>{
+          try{
+            stopAnim();
+            computeWindows();
+          }catch(e){
+            console.error(e);
+            toast("Circle update failed.", 'err', e.message || String(e));
+          }
+        }, 120);
+      }
+      [el.r, el.theta0, el.omega, el.phi, el.delta, el.T].forEach(inp=>{
+        inp.addEventListener('change', onChange);
+      });
+
+      computeWindows();
+      return { exportJSON };
+    }
+
+    return { init, exportJSON: ()=>exportJSON() };
+  })();
+
+  // ==========================
+  // Export glue
+  // ==========================
+  const exportBox = document.getElementById('exportBox');
+  const btnExportBrick = document.getElementById('exportBrick');
+  const btnExportCircle = document.getElementById('exportCircle');
+  const btnClearExport = document.getElementById('clearExport');
+
+  function setExport(obj){
+    exportBox.value = JSON.stringify(obj, null, 2);
+    exportBox.focus();
+    exportBox.select();
+    toast("Export prepared — copy from the box.", 'info');
+  }
+
+  // ==========================
+  // Boot
+  // ==========================
+  try{
+    // Basic feature check
+    const testCanvas = document.createElement('canvas');
+    if(!testCanvas.getContext) throw new Error("Canvas not supported");
+
+    const brickAPI = Brick.init();
+    const circleAPI = Circle.init();
+
+    btnExportBrick.onclick = ()=> setExport(brickAPI.exportJSON());
+    btnExportCircle.onclick = ()=> setExport(circleAPI.exportJSON());
+    btnClearExport.onclick = ()=>{ exportBox.value=''; toast("Cleared.", 'info'); };
+
+    // Success smoke marker
+    app.setAttribute('data-smoke', 'ok');
+    window.__canvasStatus = 'ready';
+    toast("Interactive model ready.", 'info', "You can now tweak constraints and observe trajectories.");
+  } catch(e){
+    console.error(e);
+    window.__canvasStatus = 'error';
+    fallback(e && e.message ? e.message : e);
+  }
+})();
+</script>
+</body>
+</html>
