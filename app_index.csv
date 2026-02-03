@@ -10,3 +10,4 @@ index,name,description,tags,link
 9,Wiring Diagrams ↔ Lenses Explainer,Interactive explainer showing how wiring diagrams relate to lenses with SMC intuition and cartesian semantics.,wiring|lens|explainer|diagram,apps/wiring_lens_explainer.html
 10,Why This Matters,Project-manager focused explanation of why the partial-visibility lens model matters for planning and steering.,project-management|planning|explanation,apps/why-this-matters.html
 11,Offshore Wind Maintenance Lens,Offshore wind O&M lens demo that turns sea-state forecasts into 3-hour visit visibility windows with doping constraints and scheduling policies.,offshore|maintenance|lens|simulation,apps/offshore_wind_maintenance_lens_copy.html
+12,Dynamic Project States — Brick Cylinder (Toy Model) v2,Updated brick cylinder toy model with keyboard controls plus status and timeline indicators for cw/ccw trajectory choices.,simulation|brickwork|trajectory|controls,apps/Possible-trajectories1.html
