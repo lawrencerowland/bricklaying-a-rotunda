@@ -1,0 +1,1294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Toy Project Dynamics (Lenses) — Brickwork + Slot Observation</title>
+<style>
+  :root{
+    --bg:#0b0c10;
+    --panel:#111318;
+    --panel2:#0f1116;
+    --text:#e8e8ea;
+    --muted:#b8b8be;
+    --accent:#5eead4;
+    --accent2:#93c5fd;
+    --warn:#fbbf24;
+    --bad:#fb7185;
+    --good:#34d399;
+    --border:#22242c;
+  }
+  html, body{height:100%;}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    background: radial-gradient(1100px 600px at 20% 0%, #12152a 0%, var(--bg) 55%);
+    color: var(--text);
+  }
+  header{
+    padding:16px 18px 12px 18px;
+    border-bottom:1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+  }
+  header h1{
+    margin:0;
+    font-size:18px;
+    letter-spacing:0.2px;
+    font-weight:650;
+  }
+  header .sub{
+    margin-top:6px;
+    font-size:12px;
+    color: var(--muted);
+    line-height:1.35;
+    max-width: 1100px;
+  }
+  .tabs{
+    display:flex;
+    gap:10px;
+    padding:12px 18px;
+    border-bottom:1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    backdrop-filter: blur(10px);
+  }
+  .tabbtn{
+    border:1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+    color: var(--text);
+    padding:8px 10px;
+    border-radius: 10px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:13px;
+  }
+  .tabbtn.active{
+    border-color: rgba(94,234,212,0.55);
+    box-shadow: 0 0 0 1px rgba(94,234,212,0.25) inset;
+    background: rgba(94,234,212,0.10);
+  }
+  .wrap{padding: 16px 18px 22px 18px;}
+  .panel{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns: 1.25fr 0.85fr;
+    gap: 14px;
+    align-items:start;
+  }
+  @media (max-width: 1050px){
+    .grid2{grid-template-columns: 1fr;}
+  }
+  h2{
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    letter-spacing:0.2px;
+  }
+  .muted{color: var(--muted);}
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:flex-end;
+    margin: 10px 0 12px 0;
+  }
+  .cg{
+    border:1px solid var(--border);
+    border-radius: 12px;
+    padding:10px;
+    background: rgba(0,0,0,0.20);
+    min-width: 170px;
+  }
+  .cg label{
+    display:block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom:6px;
+  }
+  .cg input[type="number"], .cg input[type="text"], .cg select{
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 8px;
+    border-radius: 10px;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    outline:none;
+  }
+  .cg input[type="range"]{
+    width:100%;
+  }
+  .btnrow{display:flex; gap:10px; flex-wrap:wrap; margin-top: 8px;}
+  button.action{
+    border:1px solid var(--border);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor:pointer;
+    font-weight:650;
+    font-size:13px;
+  }
+  button.action.primary{
+    border-color: rgba(94,234,212,0.55);
+    background: rgba(94,234,212,0.12);
+  }
+  button.action:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+  .can{
+    width:100%;
+    border:1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.18);
+  }
+  .row{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .kpi{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding: 10px 12px;
+    border:1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(0,0,0,0.22);
+    min-width: 220px;
+  }
+  .kpi .k{font-size: 12px; color: var(--muted);}
+  .kpi .v{font-size: 14px; font-weight:700;}
+  table{
+    border-collapse: collapse;
+    width:100%;
+    font-size:12px;
+  }
+  td, th{
+    border:1px solid var(--border);
+    padding:6px 7px;
+    text-align:left;
+    vertical-align:top;
+  }
+  th{
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+    font-weight:700;
+  }
+  code, pre{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+  }
+  pre{
+    margin:0;
+    padding: 10px 10px;
+    background: rgba(0,0,0,0.30);
+    border:1px solid var(--border);
+    border-radius: 12px;
+    overflow:auto;
+    max-height: 420px;
+    color: #f3f4f6;
+  }
+  .pill{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+    font-size: 11px;
+    margin-right:6px;
+  }
+  .note{
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.35;
+    margin-top: 8px;
+  }
+  .hide{display:none;}
+  .split{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  svg{
+    width:100%;
+    height:auto;
+    border:1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.18);
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Toy Project Dynamics as Lenses — discrete brickwork + continuous slot sensor</h1>
+  <div class="sub">
+    This is a self-contained HTML demo (no external libraries) that treats
+    (i) a discrete “cylindrical brick installation” as a state-transition system,
+    and (ii) a continuous rotation observed through a viewing slot as an open dynamical system with a partial observation.
+    The intent is proof-of-concept: state space, trajectories, and a lens-shaped interface (update/expose).
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tabbtn active" data-tab="brickTab">Brickwork (discrete)</button>
+  <button class="tabbtn" data-tab="slotTab">Slot observation (continuous)</button>
+</div>
+
+<div class="wrap">
+
+  <div id="brickTab" class="panel">
+    <h2>Brickwork: “blueprint filled in” as a deterministic/possibilistic transition system</h2>
+
+    <div class="controls">
+      <div class="cg">
+        <label>Courses (height) N</label>
+        <input id="bN" type="number" min="1" max="40" value="10"/>
+      </div>
+      <div class="cg">
+        <label>Bricks per course M</label>
+        <input id="bM" type="number" min="3" max="80" value="24"/>
+      </div>
+      <div class="cg">
+        <label>Start-offset rule</label>
+        <select id="bStartMode">
+          <option value="free" selected>free (M choices / course)</option>
+          <option value="stagger">staggered (start shifts each course)</option>
+        </select>
+      </div>
+      <div class="cg">
+        <label>Stagger shift (if staggered)</label>
+        <input id="bShift" type="number" min="0" max="79" value="1"/>
+      </div>
+      <div class="cg">
+        <label>Doping constraints</label>
+        <select id="bDopingMode">
+          <option value="off" selected>off</option>
+          <option value="on">on (random levels per course)</option>
+        </select>
+        <div class="note">
+          Level 0: no restriction; Level 1: must alternate direction; Level 2: CW only. Each level adds curing delay.
+        </div>
+      </div>
+      <div class="cg">
+        <label>Random seed</label>
+        <input id="bSeed" type="text" value="42"/>
+      </div>
+
+      <div class="cg">
+        <label>Animation</label>
+        <div class="btnrow">
+          <button class="action primary" id="bGenerate">Generate plan</button>
+          <button class="action" id="bPlay">Play</button>
+          <button class="action" id="bPause">Pause</button>
+          <button class="action" id="bStep">Step</button>
+          <button class="action" id="bReset">Reset</button>
+        </div>
+        <div class="note">
+          “Step” advances by one brick placement or one curing tick.
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="split">
+        <canvas id="brickCanvas" class="can" width="960" height="520"></canvas>
+        <div class="note">
+          Unwrapped cylinder: x = brick position (mod M), y = course index. Filled cells are placed bricks; yellow outline is the next brick.
+        </div>
+      </div>
+
+      <div class="split">
+        <canvas id="trajCanvas" class="can" width="720" height="520"></canvas>
+        <div id="brickKPIs" class="row"></div>
+        <div class="note">
+          Right panel sketches the direction-choice tree (CW/CCW) for the first few courses and reports plan counts under the current constraints.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="slotTab" class="panel hide">
+    <h2>Circular motion observed through a slot: a (differential) system + a sensor interface</h2>
+
+    <div class="controls">
+      <div class="cg">
+        <label>Radius r</label>
+        <input id="sR" type="number" min="0.1" max="10" step="0.1" value="2.0"/>
+      </div>
+      <div class="cg">
+        <label>Angular speed ω (rad/s)</label>
+        <input id="sW" type="number" min="-10" max="10" step="0.1" value="1.3"/>
+      </div>
+      <div class="cg">
+        <label>Start angle θ₀ (deg)</label>
+        <input id="sTheta0" type="number" min="-720" max="720" step="1" value="25"/>
+      </div>
+      <div class="cg">
+        <label>Slot center (deg)</label>
+        <input id="sSlotC" type="number" min="-720" max="720" step="1" value="90"/>
+      </div>
+      <div class="cg">
+        <label>Slot width (deg)</label>
+        <input id="sSlotW" type="number" min="1" max="360" step="1" value="30"/>
+      </div>
+      <div class="cg">
+        <label>Duration (s)</label>
+        <input id="sT" type="number" min="1" max="60" step="1" value="18"/>
+      </div>
+      <div class="cg">
+        <label>Sim step Δt (s)</label>
+        <input id="sDt" type="number" min="0.005" max="1" step="0.005" value="0.02"/>
+      </div>
+      <div class="cg">
+        <label>Animation</label>
+        <div class="btnrow">
+          <button class="action primary" id="sRun">Run</button>
+          <button class="action" id="sPlay">Play</button>
+          <button class="action" id="sPause">Pause</button>
+          <button class="action" id="sReset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="split">
+        <canvas id="slotCanvas" class="can" width="960" height="520"></canvas>
+        <canvas id="timelineCanvas" class="can" width="960" height="150"></canvas>
+        <div class="note">
+          Top: rotating point and the visible arc (slot). Bottom: visibility over time (white = visible).
+        </div>
+      </div>
+
+      <div class="split">
+        <div id="slotKPIs" class="row"></div>
+        <div class="panel" style="padding:12px; background:rgba(0,0,0,0.18);">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div style="font-weight:700;">Analytic visibility intervals</div>
+            <div class="muted" style="font-size:12px;">computed from θ(t)=θ₀+ωt mod 2π</div>
+          </div>
+          <div style="height:10px;"></div>
+          <div id="slotIntervals"></div>
+        </div>
+
+        <div class="panel" style="padding:12px; background:rgba(0,0,0,0.18);">
+          <div style="font-weight:700; margin-bottom:8px;">Wiring diagram sketch</div>
+          <svg id="wiringSvg" viewBox="0 0 860 330" role="img" aria-label="Wiring diagram">
+            <defs>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="4.2" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+              <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                <path d="M0,0 L10,4 L0,8 z" fill="#93c5fd"></path>
+              </marker>
+            </defs>
+
+            <!-- boxes -->
+            <rect x="26" y="40" width="170" height="90" rx="14" fill="rgba(255,255,255,0.04)" stroke="#22242c"/>
+            <text x="111" y="74" text-anchor="middle" fill="#e8e8ea" font-size="14" font-weight="700">Init</text>
+            <text x="111" y="98" text-anchor="middle" fill="#b8b8be" font-size="12">θ₀, ω, r ↦ s₀</text>
+
+            <rect x="260" y="30" width="250" height="120" rx="14" fill="rgba(255,255,255,0.04)" stroke="#22242c"/>
+            <text x="385" y="64" text-anchor="middle" fill="#e8e8ea" font-size="14" font-weight="700">Dynamics</text>
+            <text x="385" y="88" text-anchor="middle" fill="#b8b8be" font-size="12">s=(θ,ω,r,τ),  ṡ=update(s)</text>
+            <text x="385" y="112" text-anchor="middle" fill="#b8b8be" font-size="12">expose(s)=(θ,r,τ)</text>
+
+            <rect x="560" y="30" width="270" height="120" rx="14" fill="rgba(255,255,255,0.04)" stroke="#22242c"/>
+            <text x="695" y="64" text-anchor="middle" fill="#e8e8ea" font-size="14" font-weight="700">Slot sensor</text>
+            <text x="695" y="88" text-anchor="middle" fill="#b8b8be" font-size="12">visible(θ), pos=(r cosθ, r sinθ)</text>
+            <text x="695" y="112" text-anchor="middle" fill="#b8b8be" font-size="12">output=(vis,x,y,τ)</text>
+
+            <rect x="260" y="200" width="570" height="90" rx="14" fill="rgba(255,255,255,0.03)" stroke="#22242c"/>
+            <text x="545" y="236" text-anchor="middle" fill="#e8e8ea" font-size="14" font-weight="700">Observation record</text>
+            <text x="545" y="260" text-anchor="middle" fill="#b8b8be" font-size="12">Extract intervals (enter/exit times) from output stream</text>
+
+            <!-- wires -->
+            <path d="M196,85 C220,85 230,85 260,85" stroke="#93c5fd" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+            <path d="M510,85 C530,85 540,85 560,85" stroke="#93c5fd" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+            <path d="M695,150 C695,170 695,180 695,200" stroke="#93c5fd" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+            <path d="M385,150 C385,170 385,180 385,200" stroke="#93c5fd" stroke-width="3" fill="none" marker-end="url(#arrow)" opacity="0.4"/>
+
+            <text x="230" y="74" text-anchor="middle" fill="#b8b8be" font-size="11">state init</text>
+            <text x="535" y="74" text-anchor="middle" fill="#b8b8be" font-size="11">θ,r,τ</text>
+            <text x="720" y="190" text-anchor="middle" fill="#b8b8be" font-size="11">stream</text>
+          </svg>
+        </div>
+
+        <div class="panel" style="padding:12px; background:rgba(0,0,0,0.18);">
+          <div style="font-weight:700; margin-bottom:8px;">Lens (Myers orientation) for the dynamics box</div>
+          <pre id="lensText"></pre>
+          <div class="note">
+            In Myers’ convention, arenas are written (In/Out) with “inputs on top” and “outputs on bottom” so that expose is passforward and update is passback. (This is the flip of Spivak’s common (Out/In) display.)
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   Utilities
+========================= */
+function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
+function frac(x){ return x - Math.floor(x); }
+function mod(a, m){ return ((a % m) + m) % m; }
+function rad(deg){ return deg * Math.PI / 180.0; }
+function deg(rad){ return rad * 180.0 / Math.PI; }
+function fmt(x, digits=3){ return Number.parseFloat(x).toFixed(digits); }
+function seededRng(seedStr){
+  // simple LCG; deterministic in JS
+  let h = 2166136261 >>> 0;
+  for(let i=0;i<seedStr.length;i++){
+    h ^= seedStr.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  let state = h >>> 0;
+  return function(){
+    state = (1664525 * state + 1013904223) >>> 0;
+    return state / 4294967296;
+  }
+}
+
+/* =========================
+   Tab logic
+========================= */
+const tabButtons = Array.from(document.querySelectorAll('.tabbtn'));
+tabButtons.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    tabButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.getAttribute('data-tab');
+    document.getElementById('brickTab').classList.toggle('hide', target !== 'brickTab');
+    document.getElementById('slotTab').classList.toggle('hide', target !== 'slotTab');
+  });
+});
+
+/* =========================
+   Brickwork model
+========================= */
+const brickCanvas = document.getElementById('brickCanvas');
+const bctx = brickCanvas.getContext('2d');
+const trajCanvas = document.getElementById('trajCanvas');
+const tctx = trajCanvas.getContext('2d');
+
+let brickModel = {
+  N: 10, M: 24, startMode:'free', shift:1,
+  dopingMode:'off',
+  seed: '42',
+  plan: null, // {dirs:[], starts:[], doping:[], cool:[]}
+  events: [], // expanded timeline
+  step: 0,
+  playing: false,
+  timer: null,
+};
+
+function generateBrickPlan(){
+  const N = parseInt(document.getElementById('bN').value, 10);
+  const M = parseInt(document.getElementById('bM').value, 10);
+  const startMode = document.getElementById('bStartMode').value;
+  const shift = parseInt(document.getElementById('bShift').value, 10);
+  const dopingMode = document.getElementById('bDopingMode').value;
+  const seed = document.getElementById('bSeed').value.trim() || '0';
+  const rng = seededRng(seed);
+
+  const doping = [];
+  if(dopingMode === 'on'){
+    for(let i=0;i<N;i++){
+      // bias slightly towards 0 to keep feasible variety
+      const u = rng();
+      let level = (u < 0.62) ? 0 : (u < 0.87 ? 1 : 2);
+      doping.push(level);
+    }
+  }else{
+    for(let i=0;i<N;i++) doping.push(0);
+  }
+
+  const dirs = [];
+  for(let i=0;i<N;i++){
+    // initial unconstrained choice
+    dirs.push(rng() < 0.5 ? +1 : -1);
+  }
+
+  // enforce doping constraints on direction by a single forward pass:
+  // level 2 => CW only; level 1 => alternate w.r.t. previous direction
+  for(let i=0;i<N;i++){
+    if(doping[i] === 2){
+      dirs[i] = +1;
+    }else if(doping[i] === 1 && i>0){
+      dirs[i] = -dirs[i-1];
+    }
+  }
+
+  const starts = [];
+  if(startMode === 'free'){
+    for(let i=0;i<N;i++){
+      starts.push(Math.floor(rng()*M));
+    }
+  }else{ // staggered
+    const s0 = Math.floor(rng()*M);
+    for(let i=0;i<N;i++){
+      starts.push(mod(s0 + i*shift, M));
+    }
+  }
+
+  // curing: base 0 + doping level
+  const cool = doping.map(lvl => lvl); // 0,1,2 ticks
+
+  brickModel.N = N; brickModel.M = M;
+  brickModel.startMode = startMode; brickModel.shift = shift;
+  brickModel.dopingMode = dopingMode;
+  brickModel.seed = seed;
+  brickModel.plan = {dirs, starts, doping, cool};
+
+  brickModel.events = expandBrickEvents(brickModel.plan);
+  brickModel.step = 0;
+  brickModel.playing = false;
+  stopBrickAnim();
+
+  drawBrickAll();
+  updateBrickKPIs();
+}
+
+function expandBrickEvents(plan){
+  const {dirs, starts, doping, cool} = plan;
+  const N = dirs.length;
+  const M = brickModel.M;
+  let events = [];
+  let t = 0;
+  for(let c=0;c<N;c++){
+    for(let k=0;k<M;k++){
+      const pos = mod(starts[c] + dirs[c]*k, M);
+      events.push({t, type:'place', course:c, k, pos});
+      t += 1;
+    }
+    for(let w=0;w<cool[c];w++){
+      events.push({t, type:'wait', course:c, remaining: cool[c]-w});
+      t += 1;
+    }
+  }
+  return events;
+}
+
+function currentPlacedMap(){
+  const N = brickModel.N, M = brickModel.M;
+  const placed = Array.from({length:N}, ()=>Array.from({length:M}, ()=>null)); // store placement time
+  for(let i=0;i<brickModel.step;i++){
+    const ev = brickModel.events[i];
+    if(!ev) break;
+    if(ev.type === 'place'){
+      placed[ev.course][ev.pos] = ev.t;
+    }
+  }
+  return placed;
+}
+
+function drawBrickAll(){
+  drawBrickCanvas();
+  drawTrajCanvas();
+}
+
+function drawBrickCanvas(){
+  const N = brickModel.N, M = brickModel.M;
+  const plan = brickModel.plan;
+  const W = brickCanvas.width, H = brickCanvas.height;
+  bctx.clearRect(0,0,W,H);
+
+  // layout
+  const pad = 18;
+  const gridX = pad, gridY = pad + 18;
+  const gridW = W - 2*pad;
+  const gridH = H - 2*pad - 18;
+  const cellW = gridW / M;
+  const cellH = gridH / N;
+
+  // title
+  bctx.fillStyle = 'rgba(255,255,255,0.85)';
+  bctx.font = 'bold 14px ui-sans-serif';
+  bctx.fillText('Unwrapped cylinder blueprint', gridX, pad+2);
+
+  // placed map
+  const placed = currentPlacedMap();
+
+  // background grid
+  bctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  bctx.lineWidth = 1;
+
+  for(let r=0;r<N;r++){
+    for(let c=0;c<M;c++){
+      const x = gridX + c*cellW;
+      const y = gridY + (N-1-r)*cellH; // bottom course at y bottom
+      bctx.beginPath();
+      bctx.rect(x,y,cellW,cellH);
+      bctx.stroke();
+
+      const t = placed[r][c];
+      if(t !== null){
+        // color by age: earlier placements are darker
+        const age = clamp((brickModel.step - t)/ (N*M+1), 0, 1);
+        const a = 0.25 + 0.55*(1-age);
+        bctx.fillStyle = `rgba(94,234,212,${a})`;
+        bctx.fillRect(x+1,y+1,cellW-2,cellH-2);
+      }
+    }
+  }
+
+  // next event highlight
+  const ev = brickModel.events[brickModel.step];
+  if(ev && ev.type === 'place'){
+    const x = gridX + ev.pos*cellW;
+    const y = gridY + (N-1-ev.course)*cellH;
+    bctx.strokeStyle = 'rgba(251,191,36,0.95)';
+    bctx.lineWidth = 3;
+    bctx.strokeRect(x+1.5,y+1.5,cellW-3,cellH-3);
+  }
+
+  // course labels + plan summary
+  if(plan){
+    bctx.fillStyle = 'rgba(255,255,255,0.75)';
+    bctx.font = '12px ui-sans-serif';
+    const maxShow = Math.min(10, N);
+    for(let c=0;c<maxShow;c++){
+      const y = gridY + (N-1-c)*cellH + cellH*0.72;
+      const d = plan.dirs[c]===+1?'CW':'CCW';
+      const dop = plan.doping[c];
+      bctx.fillText(`c${c}: ${d}, start=${plan.starts[c]}, dop=${dop}`, gridX + gridW + 10, y);
+    }
+  }
+
+  // current step text
+  const total = brickModel.events.length;
+  bctx.fillStyle = 'rgba(255,255,255,0.75)';
+  bctx.font = '12px ui-sans-serif';
+  bctx.fillText(`step ${brickModel.step} / ${total}`, gridX, H-pad+2);
+  if(ev){
+    const msg = (ev.type==='place') ? `place course ${ev.course}, pos ${ev.pos}` : `curing wait (course ${ev.course})`;
+    bctx.fillText(msg, gridX+140, H-pad+2);
+  }
+}
+
+function drawTrajCanvas(){
+  const W = trajCanvas.width, H = trajCanvas.height;
+  tctx.clearRect(0,0,W,H);
+
+  tctx.fillStyle = 'rgba(255,255,255,0.85)';
+  tctx.font = 'bold 14px ui-sans-serif';
+  tctx.fillText('Direction-choice tree (first courses)', 18, 22);
+
+  const plan = brickModel.plan;
+  if(!plan){
+    tctx.fillStyle = 'rgba(255,255,255,0.60)';
+    tctx.font = '12px ui-sans-serif';
+    tctx.fillText('Generate a plan to see the branching sketch.', 18, 44);
+    return;
+  }
+
+  const maxDepth = Math.min(8, brickModel.N);
+  const x0 = 40, y0 = 60;
+  const xStep = (W - 2*x0) / (maxDepth+0.5);
+  const ySpan = H - 100;
+
+  // We'll draw a binary tree where left=CCW, right=CW, and highlight the chosen plan.
+  // For clarity we only sketch structure; we don't list start offsets.
+  function nodeY(pathBits){
+    // map path bits to y in [-1,1] using Gray-code-ish averaging
+    let y = 0;
+    let w = 1;
+    for(let b of pathBits){
+      w *= 0.5;
+      y += (b===1 ? +1 : -1) * w;
+    }
+    return y;
+  }
+
+  const nodes = [{bits:[], x:x0, y:y0 + (ySpan/2)}];
+  for(let d=0; d<maxDepth; d++){
+    const newNodes = [];
+    for(let n of nodes){
+      const leftBits = n.bits.concat([0]);
+      const rightBits = n.bits.concat([1]);
+      const xl = x0 + (d+1)*xStep;
+      const yl = y0 + (ySpan/2) + nodeY(leftBits)*(ySpan/2)*0.95;
+      const yr = y0 + (ySpan/2) + nodeY(rightBits)*(ySpan/2)*0.95;
+      newNodes.push({bits:leftBits, x:xl, y:yl});
+      newNodes.push({bits:rightBits, x:xl, y:yr});
+
+      // edges
+      tctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      tctx.lineWidth = 1;
+      tctx.beginPath(); tctx.moveTo(n.x,n.y); tctx.lineTo(xl,yl); tctx.stroke();
+      tctx.beginPath(); tctx.moveTo(n.x,n.y); tctx.lineTo(xl,yr); tctx.stroke();
+    }
+    nodes.splice(0, nodes.length, ...newNodes);
+  }
+
+  // nodes
+  function bitsToDir(bits){ return bits.map(b=> b===1 ? 'CW' : 'CCW'); }
+  const chosenBits = plan.dirs.slice(0,maxDepth).map(d=> d===+1 ? 1 : 0);
+
+  for(let n of nodes){
+    const depth = n.bits.length;
+    const chosenPrefix = chosenBits.slice(0, depth);
+    let isChosen = true;
+    for(let i=0;i<chosenPrefix.length;i++){
+      if(n.bits[i] !== chosenPrefix[i]) { isChosen = false; break; }
+    }
+    const r = depth===maxDepth ? 4 : 3;
+    tctx.beginPath();
+    tctx.arc(n.x, n.y, r, 0, Math.PI*2);
+    if(isChosen){
+      tctx.fillStyle = 'rgba(147,197,253,0.85)';
+      tctx.fill();
+      tctx.strokeStyle = 'rgba(147,197,253,0.95)';
+      tctx.stroke();
+    }else{
+      tctx.fillStyle = 'rgba(255,255,255,0.08)';
+      tctx.fill();
+      tctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      tctx.stroke();
+    }
+  }
+
+  // legend
+  tctx.fillStyle = 'rgba(255,255,255,0.70)';
+  tctx.font = '12px ui-sans-serif';
+  tctx.fillText('left=CCW, right=CW (highlight = chosen plan prefix)', 18, H-18);
+}
+
+function computeDirCountWithDoping(dopingLevels){
+  // DP over possible previous directions when doping includes "alternate" constraint.
+  // Directions are ±1. For course i, allowed dirs depend on doping[i] and prev dir.
+  let dp = new Map(); // prevDir -> count
+  dp.set(null, 1); // no previous at start
+  for(let i=0;i<dopingLevels.length;i++){
+    const lvl = dopingLevels[i];
+    const next = new Map();
+    for(let [prev, cnt] of dp.entries()){
+      let allowed = [];
+      if(lvl === 2){
+        allowed = [+1];
+      }else if(lvl === 1){
+        if(prev === null){
+          allowed = [+1, -1];
+        }else{
+          allowed = [-prev];
+        }
+      }else{
+        allowed = [+1, -1];
+      }
+      for(let d of allowed){
+        next.set(d, (next.get(d)||0) + cnt);
+      }
+    }
+    dp = next;
+  }
+  let total = 0;
+  for(let cnt of dp.values()) total += cnt;
+  return total;
+}
+
+function updateBrickKPIs(){
+  const kpiDiv = document.getElementById('brickKPIs');
+  kpiDiv.innerHTML = '';
+  const plan = brickModel.plan;
+  if(!plan) return;
+
+  const N = brickModel.N, M = brickModel.M;
+  const dirCount = (brickModel.dopingMode === 'on') ? computeDirCountWithDoping(plan.doping) : Math.pow(2, N);
+  const startCount = (brickModel.startMode === 'free') ? Math.pow(M, N) : M; // staggered => just choose start0
+  // total may be huge; use scientific-ish display
+  const totalPlans = dirCount * startCount;
+
+  const totalSteps = brickModel.events.length;
+  const curingSteps = plan.cool.reduce((a,b)=>a+b,0);
+
+  const summary = [
+    {k:'Paths (direction only)', v: dirCount.toLocaleString()},
+    {k:'Start-offset choices', v: startCount.toLocaleString()},
+    {k:'Total build sequences', v: formatHuge(totalPlans)},
+    {k:'Steps (bricks+curing)', v: `${(N*M).toLocaleString()} + ${curingSteps.toLocaleString()} = ${totalSteps.toLocaleString()}`},
+  ];
+
+  for(let item of summary){
+    const div = document.createElement('div');
+    div.className = 'kpi';
+    div.innerHTML = `<div class="k">${item.k}</div><div class="v">${item.v}</div>`;
+    kpiDiv.appendChild(div);
+  }
+}
+
+function formatHuge(x){
+  // x may exceed Number range if N large; but we only compute with JS number here.
+  if(!Number.isFinite(x)) return 'overflow';
+  if(x < 1e12) return x.toLocaleString();
+  const exp = Math.floor(Math.log10(x));
+  const mant = x / Math.pow(10, exp);
+  return `${fmt(mant,3)} × 10^${exp}`;
+}
+
+function stepBrick(){
+  brickModel.step = clamp(brickModel.step + 1, 0, brickModel.events.length);
+  drawBrickAll();
+}
+
+function resetBrick(){
+  brickModel.step = 0;
+  drawBrickAll();
+}
+
+function startBrickAnim(){
+  if(brickModel.playing) return;
+  brickModel.playing = true;
+  brickModel.timer = setInterval(()=>{
+    if(brickModel.step >= brickModel.events.length){
+      stopBrickAnim();
+      return;
+    }
+    brickModel.step += 1;
+    drawBrickAll();
+  }, 85);
+}
+
+function stopBrickAnim(){
+  brickModel.playing = false;
+  if(brickModel.timer){
+    clearInterval(brickModel.timer);
+    brickModel.timer = null;
+  }
+}
+
+/* Hook brick controls */
+document.getElementById('bGenerate').addEventListener('click', generateBrickPlan);
+document.getElementById('bPlay').addEventListener('click', startBrickAnim);
+document.getElementById('bPause').addEventListener('click', stopBrickAnim);
+document.getElementById('bStep').addEventListener('click', ()=>{ stopBrickAnim(); stepBrick(); });
+document.getElementById('bReset').addEventListener('click', ()=>{ stopBrickAnim(); resetBrick(); });
+
+/* =========================
+   Slot model
+========================= */
+const slotCanvas = document.getElementById('slotCanvas');
+const sctx = slotCanvas.getContext('2d');
+const timelineCanvas = document.getElementById('timelineCanvas');
+const tlctx = timelineCanvas.getContext('2d');
+
+let slotModel = {
+  r: 2.0,
+  w: 1.3,
+  theta0: rad(25),
+  slotC: rad(90),
+  slotW: rad(30),
+  T: 18,
+  dt: 0.02,
+  t: 0,
+  sim: [], // {t, theta, x, y, vis}
+  intervals: [], // [{t0,t1}]
+  playing: false,
+  timer: null,
+};
+
+function angleNorm(a){
+  const twopi = Math.PI*2;
+  return mod(a, twopi);
+}
+function inSlot(theta, a, b){
+  // theta in [0,2π), a,b in [0,2π) define a contiguous arc from a to b going "forward" (CCW)
+  if(a <= b){
+    return theta >= a && theta <= b;
+  }else{
+    return (theta >= a) || (theta <= b);
+  }
+}
+
+function computeVisibilityIntervals(theta0, omega, slotC, slotWidth, duration){
+  const twopi = Math.PI*2;
+  const w = Math.abs(slotWidth);
+  const width = clamp(w, 0, twopi);
+  if(width >= twopi - 1e-12){
+    return [{t0:0, t1:duration}];
+  }
+  const a0 = angleNorm(slotC - width/2);
+  const b0 = angleNorm(slotC + width/2);
+
+  if(Math.abs(omega) < 1e-12){
+    // stationary
+    const th = angleNorm(theta0);
+    if(inSlot(th, a0, b0)){
+      return [{t0:0, t1:duration}];
+    }else{
+      return [];
+    }
+  }
+
+  const u0 = theta0;
+  const u1 = theta0 + omega*duration;
+  const uMin = Math.min(u0, u1);
+  const uMax = Math.max(u0, u1);
+
+  // base intervals in [0,2π)
+  let baseIntervals = [];
+  if(a0 <= b0){
+    baseIntervals.push([a0, b0]);
+  }else{
+    baseIntervals.push([a0, twopi]);
+    baseIntervals.push([0, b0]);
+  }
+
+  let intervals = [];
+  for(let [s1,s2] of baseIntervals){
+    // find k so shifted interval intersects [uMin, uMax]
+    const kMin = Math.ceil((uMin - s2) / twopi);
+    const kMax = Math.floor((uMax - s1) / twopi);
+    for(let k = kMin; k <= kMax; k++){
+      const I1 = s1 + twopi*k;
+      const I2 = s2 + twopi*k;
+      const L = Math.max(uMin, I1);
+      const R = Math.min(uMax, I2);
+      if(R >= L - 1e-12){
+        const tA = (L - theta0)/omega;
+        const tB = (R - theta0)/omega;
+        const t0 = Math.max(0, Math.min(tA,tB));
+        const t1 = Math.min(duration, Math.max(tA,tB));
+        if(t1 >= t0 + 1e-9){
+          intervals.push({t0, t1});
+        }
+      }
+    }
+  }
+
+  // sort & merge
+  intervals.sort((p,q)=>p.t0 - q.t0);
+  const merged = [];
+  for(let iv of intervals){
+    if(merged.length === 0){
+      merged.push(iv);
+    }else{
+      const last = merged[merged.length-1];
+      if(iv.t0 <= last.t1 + 1e-6){
+        last.t1 = Math.max(last.t1, iv.t1);
+      }else{
+        merged.push(iv);
+      }
+    }
+  }
+  return merged;
+}
+
+function runSlot(){
+  // read inputs
+  slotModel.r = parseFloat(document.getElementById('sR').value);
+  slotModel.w = parseFloat(document.getElementById('sW').value);
+  slotModel.theta0 = rad(parseFloat(document.getElementById('sTheta0').value));
+  slotModel.slotC = rad(parseFloat(document.getElementById('sSlotC').value));
+  slotModel.slotW = rad(parseFloat(document.getElementById('sSlotW').value));
+  slotModel.T = parseFloat(document.getElementById('sT').value);
+  slotModel.dt = parseFloat(document.getElementById('sDt').value);
+  slotModel.t = 0;
+
+  slotModel.intervals = computeVisibilityIntervals(slotModel.theta0, slotModel.w, slotModel.slotC, slotModel.slotW, slotModel.T);
+
+  // simulate
+  slotModel.sim = [];
+  const steps = Math.floor(slotModel.T / slotModel.dt);
+  for(let i=0;i<=steps;i++){
+    const t = i*slotModel.dt;
+    const theta = slotModel.theta0 + slotModel.w*t;
+    const th = angleNorm(theta);
+    const a = angleNorm(slotModel.slotC - Math.abs(slotModel.slotW)/2);
+    const b = angleNorm(slotModel.slotC + Math.abs(slotModel.slotW)/2);
+    const vis = inSlot(th, a, b) ? 1 : 0;
+    const x = slotModel.r * Math.cos(th);
+    const y = slotModel.r * Math.sin(th);
+    slotModel.sim.push({t, theta: th, x, y, vis});
+  }
+
+  slotModel.t = 0;
+  stopSlotAnim();
+  drawSlotAll();
+  updateSlotKPIs();
+  renderIntervalsTable();
+  renderLensText();
+}
+
+function drawSlotAll(){
+  drawSlotCanvas();
+  drawTimeline();
+}
+
+function drawSlotCanvas(){
+  const W = slotCanvas.width, H = slotCanvas.height;
+  sctx.clearRect(0,0,W,H);
+
+  const pad = 18;
+  sctx.fillStyle = 'rgba(255,255,255,0.85)';
+  sctx.font = 'bold 14px ui-sans-serif';
+  sctx.fillText('Rotating point + viewing slot', pad, pad+2);
+
+  const cx = W*0.40, cy = H*0.55;
+  const Rpx = Math.min(W,H)*0.32;
+  const r = slotModel.r;
+  const scale = Rpx / Math.max(0.001, r);
+
+  // circle
+  sctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  sctx.lineWidth = 2;
+  sctx.beginPath();
+  sctx.arc(cx, cy, Rpx, 0, Math.PI*2);
+  sctx.stroke();
+
+  // slot arc
+  const width = clamp(Math.abs(slotModel.slotW), 0, Math.PI*2);
+  const a = angleNorm(slotModel.slotC - width/2);
+  const b = angleNorm(slotModel.slotC + width/2);
+
+  sctx.strokeStyle = 'rgba(94,234,212,0.85)';
+  sctx.lineWidth = 8;
+  sctx.lineCap = 'round';
+  sctx.beginPath();
+  if(a <= b){
+    sctx.arc(cx, cy, Rpx, a, b, false);
+  }else{
+    sctx.arc(cx, cy, Rpx, a, Math.PI*2, false);
+    sctx.arc(cx, cy, Rpx, 0, b, false);
+  }
+  sctx.stroke();
+  sctx.lineCap = 'butt';
+
+  // current point
+  const idx = Math.floor(slotModel.t / slotModel.dt);
+  const st = slotModel.sim[Math.min(idx, slotModel.sim.length-1)] || {t:0, theta:angleNorm(slotModel.theta0), x:r*Math.cos(slotModel.theta0), y:r*Math.sin(slotModel.theta0), vis:0};
+  const px = cx + st.x*scale;
+  const py = cy - st.y*scale;
+
+  // trail (recent)
+  const trailN = 200;
+  const start = Math.max(0, idx - trailN);
+  sctx.strokeStyle = 'rgba(147,197,253,0.28)';
+  sctx.lineWidth = 2;
+  sctx.beginPath();
+  for(let i=start;i<=idx;i++){
+    const p = slotModel.sim[i];
+    if(!p) continue;
+    const x = cx + p.x*scale;
+    const y = cy - p.y*scale;
+    if(i===start) sctx.moveTo(x,y); else sctx.lineTo(x,y);
+  }
+  sctx.stroke();
+
+  // point
+  sctx.fillStyle = st.vis ? 'rgba(251,191,36,0.95)' : 'rgba(255,255,255,0.65)';
+  sctx.beginPath();
+  sctx.arc(px, py, 8, 0, Math.PI*2);
+  sctx.fill();
+  sctx.strokeStyle = st.vis ? 'rgba(251,191,36,0.95)' : 'rgba(255,255,255,0.20)';
+  sctx.lineWidth = 2;
+  sctx.stroke();
+
+  // labels
+  sctx.fillStyle = 'rgba(255,255,255,0.75)';
+  sctx.font = '12px ui-sans-serif';
+  sctx.fillText(`t=${fmt(st.t,2)}s  θ=${fmt(deg(st.theta),1)}°  vis=${st.vis}`, pad, H - pad + 2);
+
+  // small legend
+  sctx.fillStyle = 'rgba(255,255,255,0.55)';
+  sctx.fillText('slot arc (green) | point visible (yellow)', pad, pad+20);
+}
+
+function drawTimeline(){
+  const W = timelineCanvas.width, H = timelineCanvas.height;
+  tlctx.clearRect(0,0,W,H);
+
+  const pad = 18;
+  tlctx.fillStyle = 'rgba(255,255,255,0.85)';
+  tlctx.font = 'bold 13px ui-sans-serif';
+  tlctx.fillText('Visibility over time', pad, pad+2);
+
+  const x0 = pad, y0 = pad+12;
+  const w = W - 2*pad;
+  const h = H - (pad+16) - 14;
+
+  // background
+  tlctx.fillStyle = 'rgba(255,255,255,0.04)';
+  tlctx.fillRect(x0, y0, w, h);
+
+  // draw vis blocks
+  if(slotModel.sim.length === 0) return;
+
+  const T = slotModel.T;
+  const dt = slotModel.dt;
+
+  tlctx.fillStyle = 'rgba(255,255,255,0.90)';
+  for(let p of slotModel.sim){
+    if(p.vis){
+      const x = x0 + (p.t / T) * w;
+      const bw = Math.max(1, (dt / T)*w);
+      tlctx.fillRect(x, y0, bw, h);
+    }
+  }
+
+  // current time marker
+  const xc = x0 + (slotModel.t / T) * w;
+  tlctx.strokeStyle = 'rgba(251,191,36,0.95)';
+  tlctx.lineWidth = 2;
+  tlctx.beginPath();
+  tlctx.moveTo(xc, y0);
+  tlctx.lineTo(xc, y0+h);
+  tlctx.stroke();
+
+  // axis labels
+  tlctx.fillStyle = 'rgba(255,255,255,0.70)';
+  tlctx.font = '12px ui-sans-serif';
+  tlctx.fillText('0', x0, y0+h+14);
+  tlctx.fillText(fmt(T,1)+'s', x0+w-34, y0+h+14);
+}
+
+function stepSlot(){
+  slotModel.t = slotModel.t + slotModel.dt;
+  if(slotModel.t > slotModel.T){
+    stopSlotAnim();
+    return;
+  }
+  drawSlotAll();
+}
+
+function startSlotAnim(){
+  if(slotModel.playing) return;
+  if(slotModel.sim.length === 0) runSlot();
+  slotModel.playing = true;
+  slotModel.timer = setInterval(()=>{ stepSlot(); }, 20);
+}
+function stopSlotAnim(){
+  slotModel.playing = false;
+  if(slotModel.timer){
+    clearInterval(slotModel.timer);
+    slotModel.timer = null;
+  }
+}
+function resetSlot(){
+  slotModel.t = 0;
+  drawSlotAll();
+}
+
+function updateSlotKPIs(){
+  const kpiDiv = document.getElementById('slotKPIs');
+  kpiDiv.innerHTML = '';
+  const intervals = slotModel.intervals;
+  const visibleTime = intervals.reduce((acc,iv)=>acc + (iv.t1-iv.t0), 0);
+  const fracVis = (slotModel.T > 0) ? (visibleTime / slotModel.T) : 0;
+  const period = (Math.abs(slotModel.w) > 1e-12) ? (Math.PI*2 / Math.abs(slotModel.w)) : Infinity;
+
+  const summary = [
+    {k:'Period 2π/|ω|', v: (Number.isFinite(period) ? fmt(period,3)+' s' : '∞')},
+    {k:'Visible time', v: fmt(visibleTime,3)+' s'},
+    {k:'Visibility fraction', v: fmt(fracVis*100,2)+' %'},
+    {k:'Intervals in window', v: intervals.length.toString()},
+  ];
+
+  for(let item of summary){
+    const div = document.createElement('div');
+    div.className = 'kpi';
+    div.innerHTML = `<div class="k">${item.k}</div><div class="v">${item.v}</div>`;
+    kpiDiv.appendChild(div);
+  }
+}
+
+function renderIntervalsTable(){
+  const div = document.getElementById('slotIntervals');
+  const intervals = slotModel.intervals;
+  if(intervals.length === 0){
+    div.innerHTML = `<div class="muted" style="font-size:12px;">No visible intervals in [0, ${fmt(slotModel.T,2)}].</div>`;
+    return;
+  }
+
+  // build table with entry/exit, positions
+  let rows = '';
+  for(let i=0;i<intervals.length;i++){
+    const iv = intervals[i];
+    const t0 = iv.t0, t1 = iv.t1;
+    const th0 = angleNorm(slotModel.theta0 + slotModel.w*t0);
+    const th1 = angleNorm(slotModel.theta0 + slotModel.w*t1);
+    const x0 = slotModel.r*Math.cos(th0), y0 = slotModel.r*Math.sin(th0);
+    const x1 = slotModel.r*Math.cos(th1), y1 = slotModel.r*Math.sin(th1);
+    rows += `<tr>
+      <td>${i+1}</td>
+      <td>${fmt(t0,3)}</td>
+      <td>${fmt(t1,3)}</td>
+      <td>${fmt(deg(th0),2)}° → ${fmt(deg(th1),2)}°</td>
+      <td>(${fmt(x0,3)}, ${fmt(y0,3)})</td>
+      <td>(${fmt(x1,3)}, ${fmt(y1,3)})</td>
+    </tr>`;
+  }
+
+  div.innerHTML = `<table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>enter t</th>
+        <th>exit t</th>
+        <th>θ enter → θ exit</th>
+        <th>pos @ enter</th>
+        <th>pos @ exit</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderLensText(){
+  // Provide a formal-ish lens description in Myers orientation.
+  // We model the Dynamics box as a differential system:
+  // State = R^4 with (θ, ω, r, τ), In = R^0 (no time-varying input), Out = R^3 (θ, r, τ).
+  // update returns tangent vector (ω, 0, 0, 1). expose projects (θ,r,τ).
+  const lens = `
+Choose the cartesian category C = Euc (Euclidean spaces, smooth maps).
+A differential system is a lens in Lens_Euc of the form
+  (update_S / expose_S) : (R^n / R^n) ⇆ (R^m / R^k).   [Myers, §1.3.2]
+
+For the “Dynamics” box we take:
+  State_S = R^4 with coordinates s = (θ, ω, r, τ)
+  In_S    = R^0  (closed; no external parameters during the run)
+  Out_S   = R^3 with coordinates o = (θ, r, τ)
+
+Expose (passforward):
+  expose_S : State_S → Out_S
+  expose_S(θ, ω, r, τ) = (θ, r, τ)
+
+Update (passback / vector field):
+  update_S : State_S × In_S → R^4   (tangent at s)
+  update_S((θ, ω, r, τ), *) = ( ω, 0, 0, 1 )
+
+This encodes dθ/dt = ω, dω/dt = 0, dr/dt = 0, dτ/dt = 1.
+The “Init” and “Slot sensor” boxes are then lenses that re-interface this closed system
+by setting the initial state from (θ₀, ω, r) and mapping Out_S to (vis, x, y, τ).
+`.trim();
+  document.getElementById('lensText').textContent = lens;
+}
+
+/* Hook slot controls */
+document.getElementById('sRun').addEventListener('click', runSlot);
+document.getElementById('sPlay').addEventListener('click', startSlotAnim);
+document.getElementById('sPause').addEventListener('click', stopSlotAnim);
+document.getElementById('sReset').addEventListener('click', ()=>{ stopSlotAnim(); resetSlot(); });
+
+/* =========================
+   Initialize defaults
+========================= */
+generateBrickPlan();
+runSlot();
+</script>
+</body>
+</html>
