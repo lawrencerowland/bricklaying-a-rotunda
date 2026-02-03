@@ -22,6 +22,14 @@
   .subtle{color:var(--muted);font-size:.95rem}
   .wrap{width:min(100%, 78rem);margin:0 auto}
   header{padding:1rem 1rem 0 1rem}
+  header .back-link{
+    display:inline-flex; align-items:center; gap:.35rem;
+    text-decoration:none; color:var(--fg); font-size:.9rem;
+  }
+  header .back-link:hover,
+  header .back-link:focus{
+    text-decoration:underline;
+  }
   .grid{
     display:grid; gap:1rem; padding:1rem;
     grid-template-columns: 1.35fr minmax(16rem, 23rem);
@@ -138,6 +146,7 @@
   <noscript>Interactive visualisation</noscript>
 
   <header class="wrap">
+    <a class="back-link" href="index.html" aria-label="Back to Apps Index">← Back to Apps Index</a>
     <h1>Dynamic Project States — Brick Cylinder (Toy Model)</h1>
     <div class="subtle">
       A course-by-course build where each course can be laid <span class="pill"><span class="dot cw"></span>cw</span> or
