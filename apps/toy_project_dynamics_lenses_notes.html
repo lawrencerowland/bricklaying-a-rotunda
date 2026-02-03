@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notes — Toy Project Dynamics (Lenses)</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <style>
+      .nav-links {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-weight: 600;
+      }
+
+      .nav-links a {
+        color: #2f3f9b;
+        text-decoration: none;
+      }
+
+      .nav-links a:hover {
+        text-decoration: underline;
+      }
+
+      .note-section {
+        margin-bottom: 32px;
+      }
+
+      .note-section h2 {
+        margin-bottom: 10px;
+        font-size: 1.5rem;
+      }
+
+      .note-section p {
+        color: #4a4f6a;
+        line-height: 1.6;
+      }
+
+      .note-section ul,
+      .note-section ol {
+        color: #4a4f6a;
+        line-height: 1.6;
+        padding-left: 20px;
+      }
+
+      .note-section code {
+        background: #edf0ff;
+        border-radius: 6px;
+        padding: 2px 6px;
+      }
+
+      .note-section pre {
+        background: #101318;
+        color: #e8e8ea;
+        border-radius: 12px;
+        padding: 16px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Notes</p>
+          <h1>Toy Project Dynamics (Lenses)</h1>
+          <p class="subtitle">
+            Companion notes unpacking the discrete brickwork toy model and the continuous
+            slot-observation lens framing.
+          </p>
+          <div class="nav-links">
+            <a href="index.html">← Back to apps index</a>
+            <a href="toy_project_dynamics_lenses_demo.html">Open the demo →</a>
+          </div>
+        </div>
+      </header>
+
+      <section class="note-section">
+        <p>
+          We can treat “project progress” as a state space whose local “tangent data” is just the
+          admissible next-completions, i.e. a discrete tangent bundle given by the outgoing
+          transition relation at each partial blueprint, and a “vector field” is then a
+          policy/strategy selecting one admissible next-step per state. The brick-cylinder toy
+          makes this concrete: each partial course-fill is a state, each choice of clockwise/
+          anticlockwise (and start-offset) is a direction in the discrete tangent fiber, and
+          “curing/doping” adds extra state coordinates that introduce holonomy-like constraints by
+          forcing dwell-time in intermediate nodes. For the continuous slot-observation system,
+          I’ll use Myers’ lens orientation (inputs on top, outputs on bottom) so expose is
+          passforward and update is passback—this lines up with the dynamical-systems interface
+          conventions in his systems-theory treatment.
+        </p>
+      </section>
+
+      <section class="note-section">
+        <h2>1) Discrete toy model: cylindrical brickwork as a state-transition system</h2>
+        <p><strong>State space X (discretised “manifold”)</strong></p>
+        <p>Fix:</p>
+        <ul>
+          <li>N: number of courses (height)</li>
+          <li>M: bricks per course (discrete angular positions 0,…, M-1)</li>
+        </ul>
+        <p>A minimal state can be:</p>
+        <p><strong>x = (c, p, σ, s, κ)</strong> where</p>
+        <ul>
+          <li>c ∈ {0,…,N}: current course index</li>
+          <li>p ∈ {0,…,M}: how many bricks in this course have been placed</li>
+          <li>σ ∈ {+1,-1}: direction for this course (CW/CCW)</li>
+          <li>s ∈ {0,…,M-1}: start-offset for this course</li>
+          <li>κ ∈ ℕ: curing cooldown remaining (optional extension)</li>
+        </ul>
+        <p>
+          You can regard the “blueprint filled in” as the exposed variable (a readout)
+          <code>expose(x)</code>, e.g. the set of completed cells in an N × M grid.
+        </p>
+
+        <p><strong>“Tangent fiber” T<sub>x</sub>X in the discrete sense</strong></p>
+        <p>At each state x, define:</p>
+        <p><strong>T<sub>x</sub>X := {admissible next actions}</strong></p>
+        <p>Example admissible actions:</p>
+        <ul>
+          <li>place_next_brick if κ = 0 and p &lt; M</li>
+          <li>start_next_course(σ, s) if κ = 0 and p = M and c &lt; N</li>
+          <li>wait if κ &gt; 0</li>
+        </ul>
+        <p>
+          A (deterministic) vector field is then a function selecting a unique action
+          <code>v(x) ∈ T<sub>x</sub>X</code>. If you want branching, switch to possibilistic/
+          stochastic dynamics (Myers explicitly packages those as lenses too).
+        </p>
+
+        <p><strong>Lens-shaped system data (Myers / dynamical systems convention)</strong></p>
+        <p>
+          A deterministic system S is: state set, input set, output set, with update/expose maps.
+          In this toy:
+        </p>
+        <ul>
+          <li>State<sub>S</sub> = set of partial-blueprint states x</li>
+          <li>In<sub>S</sub> = “builder choice” inputs (direction + start offset, or just a policy token)</li>
+          <li>Out<sub>S</sub> = “what you can see”: current blueprint fill-map (or current course progress)</li>
+        </ul>
+        <p>
+          With <code>update</code> and <code>expose</code> maps, this matches the “state + parameter
+          gives next state; state gives output” interface described in Myers’ deterministic-system
+          definition.
+        </p>
+
+        <p><strong>Pseudocode (minimal)</strong></p>
+        <pre>
+State = (course c, progress p, dir σ, start s, cooldown κ, placed[N][M])
+
+expose(State):
+    return placed   // the blueprint-as-filled-in (or a compressed summary)
+
+update(State, input):
+    if κ &gt; 0:
+        κ := κ - 1
+        return State
+
+    if p &lt; M:
+        pos := (s + σ*p) mod M
+        placed[c][pos] := true
+        p := p + 1
+        if p == M:
+            κ := curing_time(c)   // optional doping constraint
+        return State
+
+    // p == M and κ == 0:
+    if c == N-1: return State_done
+    c := c + 1
+    (σ, s) := choose_direction_and_start(input, c)
+    p := 0
+    return State
+        </pre>
+      </section>
+
+      <section class="note-section">
+        <h2>2) Spivak vs Myers lens “flip” (and what I’m choosing)</h2>
+        <ul>
+          <li>Spivak: a lens (A/A<sub>0</sub>) → (B/B<sub>0</sub>) is (f: A → B, f<sup>#</sup>: A × B<sub>0</sub> → A<sub>0</sub>).</li>
+          <li>
+            Myers: a lens (A<sup>-</sup>/A<sup>+</sup>) ⇄ (B<sup>-</sup>/B<sup>+</sup>) has
+            passforward f: A<sup>+</sup> → B<sup>+</sup> and passback f<sup>#</sup>: A<sup>+</sup> × B<sup>-</sup> → A<sup>-</sup>.
+          </li>
+        </ul>
+        <p>
+          They’re equivalent up to a systematic swap of what you put on top vs bottom (Spivak even
+          flags this “flip” issue in his slides).
+        </p>
+        <p>
+          <strong>Choice:</strong> I’ll use Myers’ orientation here, because it makes expose the
+          passforward map (state → output) and update the passback (state × input → next-state /
+          tangent), matching his system-theory definitions.
+        </p>
+      </section>
+
+      <section class="note-section">
+        <h2>3) Continuous toy model: rotation observed through a slot, as a lens + wiring diagram</h2>
+        <p><strong>Physical story (your spec)</strong></p>
+        <ul>
+          <li>Object moves around a circle.</li>
+          <li>Input: initial speed ω, start angle θ<sub>0</sub>, radius r (relative to viewing platform).</li>
+          <li>
+            Output: null in blackout; otherwise the positions and times while crossing the viewing
+            arc.
+          </li>
+        </ul>
+        <p><strong>A clean factorisation (lens-compositional)</strong></p>
+        <p>
+          It’s conceptually helpful to split into boxes (exactly what wiring diagrams are for; in
+          Spivak’s slides, wiring diagrams induce lenses built from diagonals/projections, and in
+          Myers you re-interface systems by composing with lenses).
+        </p>
+        <p>Boxes:</p>
+        <ol>
+          <li>Init: (θ<sub>0</sub>, ω, r) ↦ s<sub>0</sub></li>
+          <li>Dynamics: closed differential system evolving s(t)</li>
+          <li>Slot sensor: maps internal state to “visible-or-null” observation stream</li>
+          <li>Observer: post-process stream into entry/exit intervals (events)</li>
+        </ol>
+        <p>
+          This is also where the “open system” intuition sits: you can keep the core dynamics
+          closed, and treat openness as re-interfacing by pre/post lenses.
+        </p>
+        <p><strong>Formal lens for the dynamics box (Myers style)</strong></p>
+        <p>
+          Myers remarks that differential systems look like deterministic systems in the cartesian
+          category Euc, except that the right-hand ℝ<sup>n</sup> in the update map is interpreted as
+          a tangent space/vector field.
+        </p>
+        <p>So we can model the Dynamics box as:</p>
+        <ul>
+          <li>State<sub>S</sub> = ℝ<sup>4</sup> with s = (θ, ω, r, τ)</li>
+          <li>In<sub>S</sub> = ℝ<sup>0</sup> (closed during the run)</li>
+          <li>Out<sub>S</sub> = ℝ<sup>3</sup> with (θ, r, τ)</li>
+        </ul>
+        <p>
+          expose<sub>S</sub>(θ, ω, r, τ) = (θ, r, τ)<br />
+          update<sub>S</sub>((θ, ω, r, τ), *) = (ω, 0, 0, 1)
+        </p>
+        <p>
+          encoding: θ̇ = ω, ω̇ = 0, ṙ = 0, τ̇ = 1.
+        </p>
+        <p>
+          Then the Slot sensor is a (separate) lens/interface map that turns (θ, r, τ) into
+          (vis, x, y, τ), with x = r cos θ, y = r sin θ and vis an indicator for θ falling in the
+          slot arc (or a smooth approximation if you want to stay inside smooth maps).
+        </p>
+      </section>
+
+      <section class="note-section">
+        <h2>4) Working demo: interactive HTML with visuals + analytics</h2>
+        <p>I built a self-contained interactive HTML that:</p>
+        <ul>
+          <li>
+            animates the brickwork blueprint filling course-by-course (CW/CCW, start-offsets,
+            optional “doping/curing” delays),
+          </li>
+          <li>sketches a trajectory tree for the direction choices,</li>
+          <li>
+            simulates the rotating point + slot, plots visibility over time, and computes analytic
+            enter/exit intervals from θ(t) = θ<sub>0</sub> + ωt mod 2π,
+          </li>
+          <li>includes an SVG wiring-diagram sketch and prints the lens-formalism text (Myers orientation).</li>
+        </ul>
+        <p>
+          <a href="toy_project_dynamics_lenses_demo.html">Download the interactive HTML demo</a>
+        </p>
+      </section>
+
+      <section class="note-section">
+        <h2>5) Where this is heading (the “research leader” move)</h2>
+        <p>
+          The non-obvious next step is to stop treating “blueprint progress” as a flat product
+          state and instead treat the blueprint as a presheaf/sheaf of local completion data, where
+          restrictions are dependency projections (e.g., vertical constraints, curing constraints
+          as temporal modalities), so that “policy” becomes a section-selection problem and
+          constraints become a kind of local-to-global obstruction.
+        </p>
+        <p>
+          Try rephrasing “curing” as a modal operator (a tiny temporal type theory) and see what
+          the corresponding lens composition looks like when the modality is implemented as a
+          comonad on your project state space.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
