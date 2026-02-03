@@ -39,6 +39,18 @@
       color: #fff;
       padding: 1rem 1.25rem;
     }
+    header .back-link{
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.95rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    header .back-link:hover,
+    header .back-link:focus{
+      text-decoration: underline;
+    }
     header h1{
       margin: 0 0 0.25rem 0;
       font-size: clamp(1.05rem, 2.3vw, 1.35rem);
@@ -352,6 +364,7 @@
     </noscript>
 
     <header>
+      <a class="back-link" href="index.html" aria-label="Back to Apps Index">← Back to Apps Index</a>
       <h1>Dynamic Project States — Revised Interactive Model</h1>
       <p>Two linked demos: (A) brickwork as constrained project-state transitions; (B) a “viewing window” observer as a simpler precursor for partial visibility.</p>
     </header>
