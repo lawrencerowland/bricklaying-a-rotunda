@@ -1,0 +1,144 @@
+:root {
+  color-scheme: light;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background: #f7f7fb;
+  color: #1b1c28;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 36px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: #5b5f79;
+  margin: 0 0 12px;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 2.75rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #444764;
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
+}
+
+.search span {
+  display: block;
+  font-size: 0.85rem;
+  color: #5b5f79;
+  margin-bottom: 6px;
+}
+
+.search input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #d5d7e5;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+.status {
+  margin-bottom: 18px;
+  color: #5b5f79;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 24px rgba(20, 20, 43, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card .index {
+  font-size: 0.75rem;
+  color: #6a6f8f;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.card .name {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.description {
+  margin: 0;
+  color: #4a4f6a;
+  line-height: 1.5;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tags span {
+  background: #edf0ff;
+  color: #3b4b98;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.link {
+  margin-top: auto;
+  text-decoration: none;
+  font-weight: 600;
+  color: #2f3f9b;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
