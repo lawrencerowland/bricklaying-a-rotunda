@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wiring diagrams ↔ Lenses (SMC picture, Cartesian semantics)</title>
+  <style>
+    :root{
+      --bg: #0b0f14;
+      --panel: #121925;
+      --panel2:#0f1520;
+      --text:#e7eef8;
+      --muted:#a8b3c7;
+      --accent:#7dd3fc;
+      --accent2:#a78bfa;
+      --ok:#34d399;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --line:#263247;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg:#f7fafc;
+        --panel:#ffffff;
+        --panel2:#f2f5fb;
+        --text:#0f172a;
+        --muted:#475569;
+        --line:#d7e0ee;
+        --shadow: 0 10px 25px rgba(2,6,23,.12);
+      }
+    }
+
+    html,body{height:100%;}
+    body{
+      margin:0;
+      background: radial-gradient(1000px 800px at 20% 0%, rgba(125,211,252,.18), transparent 55%),
+                  radial-gradient(1000px 800px at 80% 0%, rgba(167,139,250,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      font-family:var(--sans);
+      line-height:1.45;
+    }
+    a{color:var(--accent);}
+    header{
+      max-width:1100px;
+      margin:24px auto 0;
+      padding: 0 16px;
+    }
+    .title{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:flex-end;
+      gap:14px;
+    }
+    .title h1{
+      font-size: clamp(26px, 4vw, 38px);
+      margin:0;
+      letter-spacing: -0.02em;
+    }
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:6px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .container{
+      max-width:1100px;
+      margin: 18px auto 70px;
+      padding: 0 16px;
+      display:grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 980px){
+      .container{
+        grid-template-columns: 350px 1fr;
+        align-items:start;
+      }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 14px 10px;
+      border-bottom:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .card .hd h2{
+      margin:0;
+      font-size: 15px;
+      letter-spacing:.01em;
+      color: var(--text);
+    }
+    .card .bd{
+      padding:14px;
+    }
+
+    .controls{
+      display:grid;
+      gap: 12px;
+    }
+    .seg{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .seg label{
+      border:1px solid var(--line);
+      padding:8px 10px;
+      border-radius: 999px;
+      cursor:pointer;
+      user-select:none;
+      font-size: 13px;
+      color: var(--muted);
+      background: rgba(255,255,255,.02);
+    }
+    .seg input{display:none;}
+    .seg input:checked + span{
+      color: var(--text);
+      border-color: rgba(125,211,252,.7);
+      box-shadow: 0 0 0 3px rgba(125,211,252,.15);
+      background: rgba(125,211,252,.08);
+    }
+    .seg span{display:inline-block;}
+
+    .btn{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor:pointer;
+      font-size: 13px;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+    }
+    .btn:hover{
+      border-color: rgba(125,211,252,.6);
+    }
+    .btn.small{
+      padding: 6px 8px;
+      border-radius: 9px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .btn.primary{
+      border-color: rgba(125,211,252,.6);
+      background: rgba(125,211,252,.12);
+    }
+    .mono{font-family: var(--mono);}
+    .muted{color:var(--muted);}
+    .k{display:inline-block; padding:0 6px; border:1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.02); font-family:var(--mono); font-size: 12px;}
+    .grid2{display:grid; gap:12px;}
+    @media (min-width: 860px){
+      .grid2{grid-template-columns: 1fr 1fr;}
+    }
+
+    details{
+      border:1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+      overflow:hidden;
+    }
+    details summary{
+      padding: 10px 12px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    details summary .tag{
+      font-size: 12px;
+      color: var(--muted);
+      border:1px solid var(--line);
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.02);
+    }
+    details .content{
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Difficulty filtering */
+    body[data-level="1"] .lvl2,
+    body[data-level="1"] .lvl3{display:none !important;}
+    body[data-level="2"] .lvl3{display:none !important;}
+
+    .diagram{
+      border:1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+      padding: 10px;
+      overflow:hidden;
+    }
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    .row > *{flex: 0 0 auto;}
+    .row .spacer{flex: 1 1 auto;}
+    .callout{
+      border-left: 3px solid var(--accent);
+      padding: 10px 12px;
+      background: rgba(125,211,252,.08);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .warn{
+      border-left-color: var(--warn);
+      background: rgba(251,191,36,.10);
+    }
+    .good{
+      border-left-color: var(--ok);
+      background: rgba(52,211,153,.10);
+    }
+    .tiny{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .inputs{
+      display:grid;
+      gap:10px;
+    }
+    .inputs label{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    select{
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      border:1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      outline:none;
+    }
+    select:focus{
+      border-color: rgba(125,211,252,.65);
+      box-shadow: 0 0 0 3px rgba(125,211,252,.12);
+    }
+    .equation{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.15);
+      padding: 10px 12px;
+      border-radius: 12px;
+      overflow:auto;
+      white-space: nowrap;
+    }
+    @media (prefers-color-scheme: light){
+      .equation{background: rgba(2,6,23,.03);}
+    }
+
+    /* Modal */
+    .modal{
+      position: fixed;
+      inset: 0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.55);
+      padding: 18px;
+      z-index: 999;
+    }
+    .modal.show{display:flex;}
+    .modal .box{
+      width: min(860px, 100%);
+      border:1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal .box .top{
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+    }
+    .modal .box .top h3{
+      margin:0;
+      font-size: 14px;
+      letter-spacing: .01em;
+    }
+    .modal .box .body{
+      padding: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .modal .box .body p{margin:0 0 10px;}
+    .badge{
+      display:inline-block;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      color: var(--muted);
+    }
+    .footer{
+      max-width:1100px;
+      margin: 30px auto 0;
+      padding: 0 16px 40px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .footgrid{
+      display:grid;
+      gap: 12px;
+    }
+    @media (min-width: 860px){
+      .footgrid{grid-template-columns: 1fr 1fr;}
+    }
+    .hr{
+      height:1px;
+      background: var(--line);
+      margin: 12px 0;
+    }
+    .chips{display:flex; gap:8px; flex-wrap:wrap;}
+    .chip{
+      padding: 6px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background: rgba(255,255,255,.02);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    /* SVG helpers */
+    svg text{font-family: var(--sans);}
+    .svg-label{fill: var(--text); font-size: 12px;}
+    .svg-muted{fill: var(--muted); font-size: 11px;}
+    .node{fill: rgba(255,255,255,.04); stroke: var(--line); stroke-width: 1.2;}
+    .wire{stroke: rgba(125,211,252,.85); stroke-width: 2.0; fill:none;}
+    .wire2{stroke: rgba(167,139,250,.85); stroke-width: 2.0; fill:none;}
+    .port{fill: rgba(255,255,255,.10); stroke: var(--line); stroke-width: 1;}
+    .arrow{marker-end:url(#arrow);}
+  </style>
+</head>
+<body data-level="1">
+<header>
+  <div class="title">
+    <h1>Wiring diagrams ↔ Lenses</h1>
+    <span class="pill">SMC picture • Cartesian “arity” semantics • click-to-explain</span>
+  </div>
+  <div class="muted" style="margin-top:8px;">
+    A single page that lets you switch difficulty, poke the diagrams, and <em>see</em> why Myers says
+    “a wiring diagram is a lens in a free cartesian category” (while your SMC intuition stays valid as the picture).
+  </div>
+</header>
+
+<main class="container">
+  <!-- Left: controls + quick map -->
+  <section class="card">
+    <div class="hd">
+      <h2>Controls</h2>
+      <button class="btn small" id="openCheat">Cheat‑sheet</button>
+    </div>
+    <div class="bd controls">
+      <div>
+        <div class="tiny" style="margin-bottom:8px;">Difficulty</div>
+        <div class="seg" role="tablist" aria-label="difficulty">
+          <label><input type="radio" name="lvl" value="1" checked><span>Intro</span></label>
+          <label><input type="radio" name="lvl" value="2"><span>Intermediate</span></label>
+          <label><input type="radio" name="lvl" value="3"><span>Advanced</span></label>
+        </div>
+        <div class="tiny" style="margin-top:8px;">
+          Tip: you can keep this on Intro and still click the “Explain” buttons.
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div>
+        <div class="row">
+          <div class="tiny">Key claim</div>
+          <div class="spacer"></div>
+          <button class="btn small" data-modal="claim">Explain</button>
+        </div>
+        <div class="callout good">
+          <b>SMC is the syntax;</b> <b>cartesian lenses are the semantics</b> for “wiring” when copying/deleting are allowed.
+        </div>
+      </div>
+
+      <details open>
+        <summary>
+          What changes vs “pure SMC”?
+          <span class="tag">one sentence</span>
+        </summary>
+        <div class="content">
+          In an arbitrary SMC you don’t get “copy” and “discard” for free; in a cartesian category you do (diagonal + terminal),
+          so a “wiring diagram” can be encoded as plain reindexing data, i.e. a lens in the free cartesian category of arities.
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          Three mental models
+          <span class="tag">pick one</span>
+        </summary>
+        <div class="content">
+          <ul style="margin:0; padding-left:18px;">
+            <li><b>Plumbing</b>: each input gets its value from some earlier output or an external inlet.</li>
+            <li><b>Variable management</b>: wiring is selecting/duplicating/dropping variables.</li>
+            <li><b>Bidirectional interface</b>: forward picks external outputs; backward supplies internal inputs.</li>
+          </ul>
+        </div>
+      </details>
+
+      <div class="chips">
+        <span class="chip">click ports</span>
+        <span class="chip">change dropdowns</span>
+        <span class="chip">open explainers</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Right: content -->
+  <section class="card">
+    <div class="hd">
+      <h2>Interactive explainer</h2>
+      <div class="row">
+        <button class="btn small" data-modal="whatIsArity">What is “Arity”?</button>
+        <button class="btn small" data-modal="lensDef">Lens definition</button>
+      </div>
+    </div>
+    <div class="bd">
+
+      <!-- SECTION 1: SMC picture -->
+      <div class="grid2">
+        <div>
+          <h3 style="margin:0 0 8px;">1) The SMC picture (string diagrams)</h3>
+          <p class="muted" style="margin:0 0 10px;">
+            This is your starting point: boxes compose <span class="k">◦</span> (series) and <span class="k">⊗</span> (parallel).
+            The twist is that Myers’ “wiring” usually also permits <b>fanout</b> and <b>discard</b> — which is cartesian structure.
+          </p>
+
+          <div class="diagram">
+            <div class="row" style="margin-bottom:10px;">
+              <button class="btn small" id="toggleComonoid">Show/Hide copy & discard</button>
+              <div class="spacer"></div>
+              <button class="btn small" data-modal="smcVsCart">Explain</button>
+            </div>
+
+            <!-- SVG: SMC diagram -->
+            <svg viewBox="0 0 520 210" width="100%" height="auto" role="img" aria-label="SMC wiring picture">
+              <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L10,3 L0,6 z" fill="currentColor"></path>
+                </marker>
+              </defs>
+
+              <!-- wires -->
+              <path class="wire" d="M40 55 C90 55, 110 55, 160 55" />
+              <path class="wire" d="M40 155 C90 155, 110 155, 160 155" />
+
+              <path class="wire" d="M240 55 C285 55, 295 55, 340 55" />
+              <path class="wire" d="M240 155 C285 155, 295 155, 340 155" />
+
+              <path class="wire" d="M420 55 C455 55, 470 55, 500 55" />
+              <path class="wire" d="M420 155 C455 155, 470 155, 500 155" />
+
+              <!-- boxes -->
+              <rect class="node" x="160" y="30" width="80" height="50" rx="10"/>
+              <text class="svg-label" x="200" y="60" text-anchor="middle">f</text>
+              <rect class="node" x="340" y="30" width="80" height="50" rx="10"/>
+              <text class="svg-label" x="380" y="60" text-anchor="middle">g</text>
+
+              <rect class="node" x="160" y="130" width="80" height="50" rx="10"/>
+              <text class="svg-label" x="200" y="160" text-anchor="middle">h</text>
+              <rect class="node" x="340" y="130" width="80" height="50" rx="10"/>
+              <text class="svg-label" x="380" y="160" text-anchor="middle">k</text>
+
+              <!-- labels -->
+              <text class="svg-muted" x="40" y="25">parallel ⊗ and series ◦</text>
+
+              <!-- Comonoid gadgets (hidden by default) -->
+              <g id="comonoidGadgets" style="display:none;">
+                <!-- copy node -->
+                <circle class="port" cx="95" cy="105" r="12"/>
+                <text class="svg-label" x="95" y="109" text-anchor="middle">Δ</text>
+                <path class="wire2" d="M40 105 C60 105, 68 105, 83 105" />
+                <path class="wire2" d="M107 105 C128 90, 136 78, 160 55" />
+                <path class="wire2" d="M107 105 C128 120, 136 132, 160 155" />
+                <!-- discard node -->
+                <circle class="port" cx="455" cy="105" r="12"/>
+                <text class="svg-label" x="455" y="109" text-anchor="middle">!</text>
+                <path class="wire2" d="M420 105 C438 105, 442 105, 443 105" />
+                <path class="wire2" d="M467 105 C480 105, 490 105, 500 105" />
+                <text class="svg-muted" x="30" y="110">copy</text>
+                <text class="svg-muted" x="470" y="110">discard</text>
+              </g>
+
+              <!-- invisible click targets -->
+              <rect x="0" y="0" width="520" height="210" fill="transparent" onclick="openModal('smcVsCart')"></rect>
+            </svg>
+          </div>
+
+          <div class="callout warn" style="margin-top:10px;">
+            If your “wiring diagrams” allow fanout/weakening, you’ve quietly assumed a <b>cartesian</b> (or at least comonoid‑enriched) monoidal structure.
+          </div>
+        </div>
+
+        <!-- SECTION 2: Lens -->
+        <div>
+          <h3 style="margin:0 0 8px;">2) Lenses: forward + backward</h3>
+          <p class="muted" style="margin:0 0 10px;">
+            Myers packages “interface connection” as a <b>lens</b> in a cartesian category:
+            a forward map plus a backward map that may depend on the forward‑flowing value.
+          </p>
+          <div class="diagram">
+            <div class="row" style="margin-bottom:10px;">
+              <button class="btn small" data-modal="lensDef">Explain lens maps</button>
+              <div class="spacer"></div>
+              <span class="badge lvl2">intermediate+</span>
+            </div>
+            <svg viewBox="0 0 520 220" width="100%" height="auto" role="img" aria-label="Lens diagram">
+              <defs>
+                <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L10,3 L0,6 z" fill="currentColor"></path>
+                </marker>
+              </defs>
+
+              <!-- A box -->
+              <rect class="node" x="50" y="55" width="160" height="110" rx="14"/>
+              <text class="svg-label" x="130" y="78" text-anchor="middle">A</text>
+              <text class="svg-muted" x="70" y="112">A⁺ (forward)</text>
+              <text class="svg-muted" x="70" y="142">A⁻ (backward)</text>
+              <circle class="port" cx="210" cy="110" r="7"/>
+              <circle class="port" cx="50" cy="140" r="7"/>
+
+              <!-- B box -->
+              <rect class="node" x="310" y="55" width="160" height="110" rx="14"/>
+              <text class="svg-label" x="390" y="78" text-anchor="middle">B</text>
+              <text class="svg-muted" x="330" y="112">B⁺</text>
+              <text class="svg-muted" x="330" y="142">B⁻</text>
+              <circle class="port" cx="310" cy="110" r="7"/>
+              <circle class="port" cx="470" cy="140" r="7"/>
+
+              <!-- forward wire -->
+              <path class="wire arrow" style="marker-end:url(#arrow2); color: rgba(125,211,252,.85);" d="M217 110 C250 110, 270 110, 303 110"/>
+              <text class="svg-label" x="260" y="98" text-anchor="middle">f : A⁺ → B⁺</text>
+
+              <!-- backward wire -->
+              <path class="wire2 arrow" style="marker-end:url(#arrow2); color: rgba(167,139,250,.85);" d="M460 140 C390 200, 160 200, 58 140"/>
+              <text class="svg-label" x="260" y="206" text-anchor="middle">f♯ : A⁺ × B⁻ → A⁻</text>
+
+              <rect x="0" y="0" width="520" height="220" fill="transparent" onclick="openModal('lensDef')"></rect>
+            </svg>
+
+            <div class="lvl3" style="margin-top:10px;">
+              <div class="equation">
+                Lens_C((A⁻/A⁺),(B⁻/B⁺))  ≅  C(A⁺,B⁺) × C(A⁺×B⁻,A⁻)
+              </div>
+              <div class="tiny" style="margin-top:8px;">
+                (This is exactly the definition Myers uses before specializing to Arity.)
+              </div>
+            </div>
+          </div>
+
+          <details class="lvl2" style="margin-top:10px;">
+            <summary>
+              Why lenses match “wiring” of open systems
+              <span class="tag">intermediate</span>
+            </summary>
+            <div class="content">
+              “Forward” tells you what output appears at the outer interface; “backward” tells you how the outer environment’s inputs
+              (plus the already‑computed inner outputs) determine the inner inputs. That is exactly what a wiring pattern does.
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- SECTION 3: Arity demo -->
+      <h3 style="margin:0 0 8px;">3) Arity = free cartesian “variable‑shuffling”</h3>
+      <p class="muted" style="margin:0 0 10px;">
+        Think: objects are “tuples of wires”. A morphism in <b>Arity</b> is just a way to pick, duplicate, or drop coordinates.
+      </p>
+
+      <div class="grid2">
+        <div class="diagram">
+          <div class="row" style="margin-bottom:10px;">
+            <b>Interactive reindexing</b>
+            <div class="spacer"></div>
+            <button class="btn small" data-modal="arityReindex">Explain</button>
+          </div>
+
+          <div class="muted" style="font-size:13px;">
+            Let <span class="k">I = {a,b}</span>, <span class="k">J = {1,2,3}</span>. Choose a function <span class="k">f : J → I</span>.
+          </div>
+
+          <div class="inputs" style="margin-top:10px;">
+            <label>f(1) =
+              <select id="f1">
+                <option value="a">a</option>
+                <option value="b">b</option>
+              </select>
+            </label>
+            <label>f(2) =
+              <select id="f2">
+                <option value="a">a</option>
+                <option value="b">b</option>
+              </select>
+            </label>
+            <label>f(3) =
+              <select id="f3">
+                <option value="b" selected>b</option>
+                <option value="a">a</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="equation" id="reindexFormula" style="margin-top:12px;"></div>
+          <div class="tiny" style="margin-top:8px;">
+            Duplicates = copy; missing = discard; permutation = swap. This is why “cartesian” matters.
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="row" style="margin-bottom:10px;">
+            <b>Picture: copying & dropping coordinates</b>
+            <div class="spacer"></div>
+            <span class="badge lvl2">intermediate+</span>
+          </div>
+
+          <svg viewBox="0 0 520 240" width="100%" height="auto" role="img" aria-label="Arity tuple wiring">
+            <defs>
+              <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L10,3 L0,6 z" fill="currentColor"></path>
+              </marker>
+            </defs>
+
+            <!-- left tuple -->
+            <rect class="node" x="40" y="60" width="130" height="120" rx="14"/>
+            <text class="svg-label" x="105" y="82" text-anchor="middle">X^I</text>
+            <circle class="port" cx="170" cy="100" r="7"/><text class="svg-muted" x="58" y="104">a</text>
+            <circle class="port" cx="170" cy="140" r="7"/><text class="svg-muted" x="58" y="144">b</text>
+
+            <!-- right tuple -->
+            <rect class="node" x="350" y="40" width="130" height="160" rx="14"/>
+            <text class="svg-label" x="415" y="62" text-anchor="middle">X^J</text>
+            <circle class="port" cx="350" cy="80" r="7"/><text class="svg-muted" x="456" y="84">1</text>
+            <circle class="port" cx="350" cy="120" r="7"/><text class="svg-muted" x="456" y="124">2</text>
+            <circle class="port" cx="350" cy="160" r="7"/><text class="svg-muted" x="456" y="164">3</text>
+
+            <!-- wires (updated by JS) -->
+            <path id="w1" class="wire arrow" style="marker-end:url(#arrow3); color: rgba(125,211,252,.85);" d="" />
+            <path id="w2" class="wire arrow" style="marker-end:url(#arrow3); color: rgba(125,211,252,.85);" d="" />
+            <path id="w3" class="wire arrow" style="marker-end:url(#arrow3); color: rgba(125,211,252,.85);" d="" />
+
+            <text class="svg-muted" x="200" y="210">reindexing along f : J → I</text>
+          </svg>
+          <div class="tiny" style="margin-top:8px;">
+            We draw wires from coordinate <span class="k">a</span> or <span class="k">b</span> into each output slot <span class="k">1,2,3</span>.
+          </div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- SECTION 4: Wiring diagram as lens (interactive) -->
+      <h3 style="margin:0 0 8px;">4) Wiring diagram = lens in Arity (interactive)</h3>
+      <p class="muted" style="margin:0 0 10px;">
+        A wiring pattern is just two assignment functions:
+        (i) which <b>inner output</b> becomes each <b>outer output</b>, and
+        (ii) where each <b>inner input</b> gets its value from (an inner output or an outer input).
+      </p>
+
+      <div class="grid2">
+        <div class="diagram">
+          <div class="row" style="margin-bottom:10px;">
+            <b>Choose the wiring</b>
+            <div class="spacer"></div>
+            <button class="btn small" data-modal="twoFunctions">Explain “two functions”</button>
+          </div>
+
+          <div class="inputs">
+            <label>Outer output <span class="k">O</span> comes from inner output
+              <select id="wO">
+                <option value="o1">o1</option>
+                <option value="o2" selected>o2</option>
+              </select>
+            </label>
+            <label>Inner input <span class="k">i1</span> reads from
+              <select id="wi1">
+                <option value="I">outer input I</option>
+                <option value="o1" selected>o1</option>
+                <option value="o2">o2</option>
+              </select>
+            </label>
+            <label>Inner input <span class="k">i2</span> reads from
+              <select id="wi2">
+                <option value="I" selected>outer input I</option>
+                <option value="o1">o1</option>
+                <option value="o2">o2</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="callout" style="margin-top:12px;">
+            You’re literally choosing the maps <span class="k">w : B⁺ → A⁺</span> and <span class="k">w♯ : A⁻ → (A⁺ + B⁻)</span>.
+          </div>
+
+          <div class="lvl2 equation" id="lensFormula" style="margin-top:12px;"></div>
+          <div class="tiny lvl2" style="margin-top:8px;">
+            In Arity, <span class="k">X^{A⁺}×X^{B⁻} ≅ X^{A⁺+B⁻}</span>, so <span class="k">w♯</span> is a reindexing recipe.
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="row" style="margin-bottom:10px;">
+            <b>See it as a wiring diagram</b>
+            <div class="spacer"></div>
+            <button class="btn small" data-modal="whyLens">Why is this a lens?</button>
+          </div>
+
+          <svg id="wdSvg" viewBox="0 0 520 280" width="100%" height="auto" role="img" aria-label="Wiring diagram as lens">
+            <defs>
+              <marker id="arrow4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L10,3 L0,6 z" fill="currentColor"></path>
+              </marker>
+            </defs>
+
+            <!-- Outer boundary -->
+            <rect x="20" y="20" width="480" height="240" rx="18" class="node" style="fill: rgba(255,255,255,.02);"></rect>
+            <text class="svg-muted" x="35" y="40">environment / outer interface</text>
+
+            <!-- Inner box -->
+            <rect x="170" y="70" width="180" height="130" rx="16" class="node"></rect>
+            <text class="svg-label" x="260" y="95" text-anchor="middle">inner system</text>
+
+            <!-- Ports -->
+            <!-- inner inputs -->
+            <circle class="port" cx="170" cy="120" r="7"/><text class="svg-muted" x="132" y="124">i1</text>
+            <circle class="port" cx="170" cy="160" r="7"/><text class="svg-muted" x="132" y="164">i2</text>
+
+            <!-- inner outputs -->
+            <circle class="port" cx="350" cy="120" r="7"/><text class="svg-muted" x="362" y="124">o1</text>
+            <circle class="port" cx="350" cy="160" r="7"/><text class="svg-muted" x="362" y="164">o2</text>
+
+            <!-- outer input I -->
+            <circle class="port" cx="50" cy="230" r="7"/><text class="svg-muted" x="62" y="234">I</text>
+            <!-- outer output O -->
+            <circle class="port" cx="470" cy="230" r="7"/><text class="svg-muted" x="452" y="234">O</text>
+
+            <!-- Wires (updated by JS) -->
+            <path id="wire_O" class="wire arrow" style="marker-end:url(#arrow4); color: rgba(125,211,252,.85);" d="" />
+            <path id="wire_i1" class="wire2 arrow" style="marker-end:url(#arrow4); color: rgba(167,139,250,.85);" d="" />
+            <path id="wire_i2" class="wire2 arrow" style="marker-end:url(#arrow4); color: rgba(167,139,250,.85);" d="" />
+
+            <text class="svg-muted" x="35" y="268">forward: choose outer outputs • backward: supply inner inputs</text>
+          </svg>
+
+          <div class="tiny" style="margin-top:8px;">
+            Blue = passforward (outer outputs). Purple = passback (supplying inner inputs from inner outputs or outer inputs).
+          </div>
+        </div>
+      </div>
+
+      <details class="lvl2" style="margin-top:12px;">
+        <summary>
+          The “equivalence” you wanted, said plainly
+          <span class="tag">intermediate</span>
+        </summary>
+        <div class="content">
+          Your SMC intuition is the correct <em>graphical calculus</em> (series/parallel composition).
+          Myers’ move is that when “wiring” also includes copy/delete, the right underlying algebra is cartesian reindexing; and a
+          lens in the free cartesian category packages exactly the two pieces of wiring data (outer outputs chosen; inner inputs supplied).
+        </div>
+      </details>
+
+      <details class="lvl3" style="margin-top:12px;">
+        <summary>
+          Advanced: why “free cartesian” is the cleanest core
+          <span class="tag">advanced</span>
+        </summary>
+        <div class="content">
+          In a cartesian monoidal category, every object has a canonical commutative comonoid (Δ, !), so you don’t separately axiomatize
+          “duplication/weakening” as extra structure; the category of arities is then the initial such context, giving the most economical
+          semantics for pure wiring. From there you can extend to typed arities and (via Lawvere theories) wiring with operations.
+        </div>
+      </details>
+
+    </div>
+  </section>
+</main>
+
+<!-- Modal -->
+<div class="modal" id="modal" aria-hidden="true">
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="top">
+      <h3 id="modalTitle">Explainer</h3>
+      <button class="btn small" id="closeModal">Close</button>
+    </div>
+    <div class="body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="hr"></div>
+  <div class="footgrid">
+    <div>
+      <div class="muted"><b>Sources / attribution</b></div>
+      <div class="tiny" style="margin-top:6px;">
+        This page is an explainer for David Jaz Myers’ <i>Categorical Systems Theory</i> (draft, 2023),
+        especially the chapters around “wiring diagrams as lenses in categories of arities” and the definition of lenses.
+      </div>
+      <div class="tiny" style="margin-top:10px;">
+        No external libraries, no tracking, offline‑friendly.
+      </div>
+    </div>
+    <div>
+      <div class="muted"><b>Suggested next rabbit holes</b></div>
+      <div class="chips" style="margin-top:8px;">
+        <span class="chip">cartesian vs linear logic</span>
+        <span class="chip">Frobenius / special commutative comonoids</span>
+        <span class="chip">optics beyond lenses</span>
+        <span class="chip">Lawvere theories as “operations in wiring”</span>
+        <span class="chip">open games, feedback, and context</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- Difficulty control ----------
+  const radios = document.querySelectorAll('input[name="lvl"]');
+  radios.forEach(r => r.addEventListener('change', () => {
+    document.body.dataset.level = r.value;
+  }));
+
+  // ---------- Modal system ----------
+  const modal = document.getElementById('modal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  const closeModalBtn = document.getElementById('closeModal');
+
+  const MODALS = {
+    claim: {
+      title: "What Myers is (and isn’t) claiming",
+      body: `
+        <p><b>Not</b>: “SMC wiring diagrams are wrong.”</p>
+        <p><b>Yes</b>: when “wiring” includes <i>copy</i> and <i>discard</i> of signals/variables, the clean algebra is <b>cartesian</b>.
+        The free cartesian category of arities is the smallest setting where you can express those structural operations, and a wiring pattern
+        becomes exactly a <b>lens</b> there.</p>
+        <p class="muted"><span class="badge">takeaway</span> Your SMC picture remains the syntax (string diagrams); the lens-in-arity story is the semantics that explains variable management.</p>
+      `
+    },
+    lensDef: {
+      title: "Lens definition (cartesian category)",
+      body: `
+        <p>A lens from <span class="k">(A⁻/A⁺)</span> to <span class="k">(B⁻/B⁺)</span> is a pair of maps:</p>
+        <ul>
+          <li><b>passforward</b> <span class="k">f : A⁺ → B⁺</span></li>
+          <li><b>passback</b> <span class="k">f♯ : A⁺ × B⁻ → A⁻</span></li>
+        </ul>
+        <p>The passback may depend on the forward-going value in <span class="k">A⁺</span> (that’s the “context” bit).</p>
+        <p class="muted"><span class="badge">composition</span> Lenses compose by composing forwards, and feeding backwards through the second lens, then the first.</p>
+      `
+    },
+    smcVsCart: {
+      title: "SMC vs cartesian: what’s the extra structure?",
+      body: `
+        <p>In a plain symmetric monoidal category you can draw wires and boxes and do <span class="k">⊗</span> and <span class="k">◦</span> — but you <b>cannot assume</b> you can duplicate or delete a wire.</p>
+        <p>In a <b>cartesian</b> monoidal category, you <i>can</i>, because every object has canonical maps:</p>
+        <ul>
+          <li>copy <span class="k">Δ : X → X×X</span> (diagonal)</li>
+          <li>discard <span class="k">! : X → 1</span> (terminal)</li>
+        </ul>
+        <p>So Myers’ “wiring diagrams” are typically about <i>structural variable flow</i> (copy/drop/shuffle) — that’s why he lands in a free cartesian category of arities.</p>
+      `
+    },
+    whatIsArity: {
+      title: "What is Arity? (free cartesian category of arities)",
+      body: `
+        <p><b>Arity</b> is the free cartesian category on one generating object <span class="k">X</span>.</p>
+        <p>Objects are finite powers <span class="k">X^I</span> (think: a tuple of wires indexed by a finite set <span class="k">I</span>).</p>
+        <p>Morphisms are generated only by product structure — equivalently, <b>reindexing</b> along functions between finite sets:
+        a function <span class="k">f : J → I</span> induces a map <span class="k">X^I → X^J</span> by pulling back coordinates.</p>
+        <p class="muted"><span class="badge">fact</span> This is why Arity is (canonically) equivalent to <span class="k">FinSet^op</span>.</p>
+      `
+    },
+    arityReindex: {
+      title: "Reindexing = wiring a tuple",
+      body: `
+        <p>Given a tuple <span class="k">(x_a, x_b)</span> and a function <span class="k">f : J → I</span>, the reindexed tuple is:</p>
+        <p class="equation">(x_a, x_b) ↦ (x_{f(1)}, x_{f(2)}, x_{f(3)})</p>
+        <p>If two outputs pick the same input coordinate, that coordinate is <b>copied</b>. If an input coordinate is never chosen, it is <b>dropped</b>.</p>
+      `
+    },
+    twoFunctions: {
+      title: "“A wiring diagram is two functions”",
+      body: `
+        <p>For a simple open wiring pattern, there are two independent choices:</p>
+        <ol>
+          <li><b>Outer outputs</b> pick which <b>inner outputs</b> they expose: <span class="k">w : B⁺ → A⁺</span>.</li>
+          <li><b>Inner inputs</b> pick their source, either an <b>inner output</b> or an <b>outer input</b>:
+              <span class="k">w♯ : A⁻ → (A⁺ + B⁻)</span>.</li>
+        </ol>
+        <p>In Arity, these are exactly the data needed to define the lens maps by reindexing.</p>
+      `
+    },
+    whyLens: {
+      title: "Why this wiring really is a lens",
+      body: `
+        <p>The lens’s forward map tells you which inner outputs become the outer outputs (that’s your <b>exposure</b> choice).</p>
+        <p>The lens’s backward map tells you how to supply the inner inputs from (i) inner outputs already computed and (ii) the outer environment’s inputs.</p>
+        <p class="muted"><span class="badge">intuition</span> Forward = “what do I show the outside?” • Backward = “what do I feed my insides given what I’m showing + what the outside provides?”</p>
+      `
+    }
+  };
+
+  function openModal(key){
+    const m = MODALS[key];
+    if(!m) return;
+    modalTitle.textContent = m.title;
+    modalBody.innerHTML = m.body;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden','false');
+  }
+  function closeModal(){
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden','true');
+  }
+  window.openModal = openModal;
+
+  document.querySelectorAll('[data-modal]').forEach(btn => {
+    btn.addEventListener('click', () => openModal(btn.dataset.modal));
+  });
+  closeModalBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if(e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') closeModal();
+  });
+
+  document.getElementById('openCheat').addEventListener('click', ()=>{
+    openModal('claim');
+  });
+
+  // ---------- SMC: toggle comonoid gadgets ----------
+  const comonoid = document.getElementById('comonoidGadgets');
+  document.getElementById('toggleComonoid').addEventListener('click', ()=>{
+    comonoid.style.display = (comonoid.style.display === 'none' || !comonoid.style.display) ? 'block' : 'none';
+  });
+
+  // ---------- Arity reindex demo ----------
+  const f1 = document.getElementById('f1');
+  const f2 = document.getElementById('f2');
+  const f3 = document.getElementById('f3');
+  const reindexFormula = document.getElementById('reindexFormula');
+  const w1 = document.getElementById('w1');
+  const w2 = document.getElementById('w2');
+  const w3 = document.getElementById('w3');
+
+  function bezier(x1,y1,x2,y2){
+    const dx = (x2-x1);
+    const c1x = x1 + dx*0.35;
+    const c2x = x1 + dx*0.65;
+    return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`;
+  }
+
+  function updateReindex(){
+    const map = { "1": f1.value, "2": f2.value, "3": f3.value };
+    // Show formula with a concrete tuple
+    const xa = "x_a", xb="x_b";
+    const pick = (v)=> v === 'a' ? xa : xb;
+    reindexFormula.textContent =
+      `(x_a, x_b)  ↦  (${pick(map["1"])}, ${pick(map["2"])}, ${pick(map["3"])})   (reindex along f: J→I)`;
+
+    // Update wires in picture
+    const src = {
+      a: {x:170, y:100},
+      b: {x:170, y:140}
+    };
+    const dst = {
+      1: {x:350, y:80},
+      2: {x:350, y:120},
+      3: {x:350, y:160}
+    };
+    const paths = [w1,w2,w3];
+    ["1","2","3"].forEach((j,idx)=>{
+      const s = src[map[j]];
+      const d = dst[j];
+      paths[idx].setAttribute('d', bezier(s.x, s.y, d.x, d.y));
+    });
+  }
+  [f1,f2,f3].forEach(el => el.addEventListener('change', updateReindex));
+  updateReindex();
+
+  // ---------- Wiring diagram as lens demo ----------
+  const wO = document.getElementById('wO');
+  const wi1 = document.getElementById('wi1');
+  const wi2 = document.getElementById('wi2');
+  const wire_O = document.getElementById('wire_O');
+  const wire_i1 = document.getElementById('wire_i1');
+  const wire_i2 = document.getElementById('wire_i2');
+  const lensFormula = document.getElementById('lensFormula');
+
+  const ports = {
+    o1: {x:350, y:120},
+    o2: {x:350, y:160},
+    i1: {x:170, y:120},
+    i2: {x:170, y:160},
+    I:  {x:50,  y:230},
+    O:  {x:470, y:230},
+  };
+
+  function wirePath(fromKey, toKey){
+    const a = ports[fromKey], b=ports[toKey];
+    const midx = (a.x+b.x)/2;
+    const c1x = a.x + (midx-a.x)*0.8;
+    const c2x = b.x - (b.x-midx)*0.8;
+    return `M ${a.x} ${a.y} C ${c1x} ${a.y}, ${c2x} ${b.y}, ${b.x} ${b.y}`;
+  }
+
+  function updateWiring(){
+    // Outer output O from chosen inner output
+    wire_O.setAttribute('d', wirePath(wO.value, 'O'));
+
+    // Inner inputs from chosen sources
+    wire_i1.setAttribute('d', wirePath(wi1.value, 'i1'));
+    wire_i2.setAttribute('d', wirePath(wi2.value, 'i2'));
+
+    // Show formula for the lens in reindexing terms
+    const w = wO.value; // w(O)=w
+    const src1 = wi1.value;
+    const src2 = wi2.value;
+
+    const show = (src)=> src === 'I' ? 'I' : src;
+    const forward = `f : X^{A⁺} → X^{B⁺} ,   (o1,o2) ↦ (${w})`;
+    const back = `f♯ : X^{A⁺}×X^{B⁻} → X^{A⁻} ,   ((o1,o2), I) ↦ (${show(src1)}, ${show(src2)})`;
+
+    lensFormula.textContent = forward + "\n" + back;
+  }
+  [wO,wi1,wi2].forEach(el => el.addEventListener('change', updateWiring));
+  updateWiring();
+</script>
+</body>
+</html>
