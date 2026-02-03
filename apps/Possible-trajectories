@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynamic Project States — Brick Cylinder (Toy Model)</title>
+<style>
+  :root{
+    --bg:#fafafa; --fg:#1f2328; --muted:#667085; --card:#ffffff;
+    --border:#e6e8eb; --shadow:0 1px 2px rgba(16,24,40,.08), 0 2px 8px rgba(16,24,40,.06);
+    --ok:#2e7d32; --warn:#b45309; --bad:#b42318;
+    --cw:#c2410c; --ccw:#1d4ed8; --inprog:#7c3aed;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .min-h-64{min-height:16rem}
+  a{color:inherit}
+  h1,h2,h3{margin:0 0 .5rem 0}
+  h1{font-size:clamp(1.25rem,2.6vw,1.9rem)}
+  h2{font-size:1.05rem}
+  p{margin:.5rem 0;color:var(--fg)}
+  .subtle{color:var(--muted);font-size:.95rem}
+  .wrap{width:min(100%, 78rem);margin:0 auto}
+  header{padding:1rem 1rem 0 1rem}
+  .grid{
+    display:grid; gap:1rem; padding:1rem;
+    grid-template-columns: 1.35fr minmax(16rem, 23rem);
+    align-items:start;
+  }
+  @media (max-width: 900px){
+    .grid{grid-template-columns: 1fr}
+  }
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:.75rem;
+    box-shadow:var(--shadow); padding: .9rem;
+  }
+  .stack{display:flex; flex-direction:column; gap:.75rem}
+  .row{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center}
+  label{font-size:.9rem; color:var(--muted)}
+  input[type="number"]{
+    width:6.5rem; padding:.45rem .55rem; border:1px solid var(--border); border-radius:.5rem; background:#fff;
+  }
+  input[type="range"]{width: 10rem}
+  select{
+    padding:.45rem .55rem; border:1px solid var(--border); border-radius:.5rem; background:#fff;
+  }
+  button{
+    appearance:none; border:1px solid var(--border); background:#fff;
+    padding:.5rem .7rem; border-radius:.55rem; cursor:pointer;
+    font-weight:600;
+  }
+  button:hover{filter:brightness(.98)}
+  button:active{transform:translateY(1px)}
+  button.primary{background:var(--fg); color:#fff; border-color:var(--fg)}
+  button.danger{border-color:#fecaca; background:#fff1f2; color:#9f1239}
+  button.cw{border-color:#fed7aa; background:#fff7ed; color:#9a3412}
+  button.ccw{border-color:#bfdbfe; background:#eff6ff; color:#1e40af}
+  button:disabled{opacity:.5; cursor:not-allowed}
+  .pill{
+    display:inline-flex; align-items:center; gap:.35rem;
+    padding:.15rem .5rem; border-radius:999px; border:1px solid var(--border); background:#fff;
+    font-size:.82rem; color:var(--muted)
+  }
+  .pill .dot{width:.55rem; height:.55rem; border-radius:50%}
+  .dot.cw{background:var(--cw)} .dot.ccw{background:var(--ccw)} .dot.inprog{background:var(--inprog)}
+  .statusbar{
+    display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; justify-content:space-between;
+    margin-top:.6rem
+  }
+  .statusleft{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center}
+  .canvaswrap{
+    width:100%;
+  }
+  canvas{
+    width:100%;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:.75rem;
+    box-shadow:var(--shadow);
+    /* reserve height before JS: updated via --aspect (width/height) */
+    aspect-ratio: var(--aspect, 24 / 10);
+  }
+  .tiny{font-size:.83rem; color:var(--muted)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .timeline{
+    display:grid; grid-auto-flow:column; grid-auto-columns: minmax(.6rem, 1fr);
+    gap:.18rem; align-items:stretch;
+    border:1px solid var(--border); border-radius:.6rem; padding:.35rem;
+    background:#fff;
+  }
+  .tlcell{
+    height:.7rem; border-radius:.2rem; background:#f3f4f6;
+    border:1px solid #eceef1;
+  }
+  .tlcell.cw{background:color-mix(in srgb, var(--cw) 65%, white)}
+  .tlcell.ccw{background:color-mix(in srgb, var(--ccw) 65%, white)}
+  .tlcell.inprog{outline:2px solid color-mix(in srgb, var(--inprog) 55%, white); outline-offset:1px}
+  .kv{display:grid; grid-template-columns: 1fr auto; gap:.35rem .75rem; margin-top:.35rem; font-size:.92rem}
+  .kv div:nth-child(odd){color:var(--muted)}
+  .svgwrap{width:100%}
+  svg{width:100%; height:auto; display:block; border:1px solid var(--border); border-radius:.6rem; background:#fff}
+  .explain{padding:0 1rem 1.5rem 1rem}
+  .explain .card{padding:1rem}
+  .checkgrid{display:grid; gap:.5rem}
+  @media (min-width: 900px){
+    .checkgrid{grid-template-columns: 1fr 1fr}
+  }
+  .checkitem{
+    display:flex; gap:.65rem; align-items:flex-start;
+    border:1px solid var(--border); border-radius:.7rem; padding:.7rem .75rem; background:#fff;
+  }
+  .checkmark{
+    width:1.15rem; height:1.15rem; border-radius:50%; flex:0 0 auto;
+    display:grid; place-items:center; font-weight:900;
+    background:#eaf7ee; color:var(--ok); border:1px solid #b7e4c7;
+  }
+  .warnmark{
+    background:#fff7ed; color:var(--warn); border:1px solid #fed7aa;
+  }
+  .xmark{
+    background:#fff1f2; color:var(--bad); border:1px solid #fecaca;
+  }
+  .toastHost{position:relative}
+  .toast{
+    position:sticky; bottom:1rem; margin: .75rem auto 0 auto;
+    width: fit-content;
+    max-width: min(40rem, 92vw);
+    background:#111827; color:#fff; padding:.55rem .8rem; border-radius:.6rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+    opacity:.96; font-size:.92rem;
+  }
+  .kbd{font-family:ui-monospace,monospace; font-size:.85rem; padding:.05rem .35rem; border-radius:.35rem; border:1px solid var(--border); background:#fff}
+</style>
+</head>
+
+<body>
+<main id="viz-container" class="min-h-64" data-timeout="3000">
+  <noscript>Interactive visualisation</noscript>
+
+  <header class="wrap">
+    <h1>Dynamic Project States — Brick Cylinder (Toy Model)</h1>
+    <div class="subtle">
+      A course-by-course build where each course can be laid <span class="pill"><span class="dot cw"></span>cw</span> or
+      <span class="pill"><span class="dot ccw"></span>ccw</span>. The branching choices are rendered as “possible trajectories”.
+    </div>
+  </header>
+
+  <section class="wrap grid">
+    <div class="card">
+      <h2>Visualisation</h2>
+      <div class="subtle">Unwrapped cylinder “blueprint”: rows are courses (bottom → top), columns are bricks around the circle.</div>
+      <div class="canvaswrap" style="margin-top:.75rem">
+        <canvas id="blueprintCanvas" aria-label="Blueprint canvas"></canvas>
+      </div>
+
+      <div class="statusbar">
+        <div class="statusleft">
+          <span class="pill"><span class="dot inprog"></span><span id="phasePill">booting…</span></span>
+          <span class="pill"><span class="dot cw"></span><span id="cwCount">cw: 0</span></span>
+          <span class="pill"><span class="dot ccw"></span><span id="ccwCount">ccw: 0</span></span>
+        </div>
+        <div class="tiny mono" id="progressText">—</div>
+      </div>
+      <div class="tiny" style="margin-top:.35rem">
+        Tips: <span class="kbd">Space</span> play/pause · <span class="kbd">→</span> step brick · <span class="kbd">Shift</span>+<span class="kbd">→</span> step course.
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="row">
+          <button id="playBtn" class="primary">Play</button>
+          <button id="pauseBtn">Pause</button>
+          <button id="resetBtn" class="danger">Reset</button>
+        </div>
+        <div class="row" style="margin-top:.25rem">
+          <button id="stepBrickBtn">Step brick</button>
+          <button id="stepCourseBtn">Step course</button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0">
+
+        <div class="row">
+          <label for="layersInput">Courses</label>
+          <input id="layersInput" type="number" min="1" max="40" step="1" value="10">
+          <label for="bricksInput">Bricks/course</label>
+          <input id="bricksInput" type="number" min="6" max="72" step="1" value="24">
+        </div>
+
+        <div class="row">
+          <label for="brickMsRange">Brick speed</label>
+          <input id="brickMsRange" type="range" min="20" max="300" step="10" value="70">
+          <span class="tiny mono" id="brickMsLabel">70ms</span>
+        </div>
+
+        <div class="row">
+          <label for="pauseMsRange">Pause between courses</label>
+          <input id="pauseMsRange" type="range" min="0" max="2500" step="100" value="0">
+          <span class="tiny mono" id="pauseMsLabel">0ms</span>
+        </div>
+
+        <div class="row">
+          <label for="policySelect">Policy</label>
+          <select id="policySelect">
+            <option value="manual">Manual (pick each course)</option>
+            <option value="always_cw">Always cw</option>
+            <option value="always_ccw">Always ccw</option>
+            <option value="alternate">Alternate cw/ccw</option>
+            <option value="random">Random coin</option>
+          </select>
+        </div>
+
+        <div class="row" id="pRow" style="display:none">
+          <label for="pRange">P(cw)</label>
+          <input id="pRange" type="range" min="0" max="100" step="5" value="50">
+          <span class="tiny mono" id="pLabel">0.50</span>
+        </div>
+
+        <div class="tiny" style="margin-top:.35rem">
+          “Policy” is the discrete analogue of a <em>vector field</em>: it selects one of the two available directions at each course start.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Tangent choices at the current state</h2>
+        <div class="subtle">At the start of a course, the action fibre is {cw, ccw}. In manual mode you must choose.</div>
+        <div class="row" style="margin-top:.55rem">
+          <button id="pickCwBtn" class="cw">Lay next course ↻ cw</button>
+          <button id="pickCcwBtn" class="ccw">Lay next course ↺ ccw</button>
+        </div>
+        <div class="tiny" style="margin-top:.35rem" id="manualHint">—</div>
+      </div>
+
+      <div class="card">
+        <h2>Trajectory</h2>
+        <div class="subtle">Top: blueprint progress bar. Bottom: tree of possible course-direction trajectories (depth-limited).</div>
+
+        <div style="margin-top:.55rem">
+          <div class="timeline" id="timeline"></div>
+          <div class="tiny mono" style="margin-top:.4rem" id="trajString">—</div>
+        </div>
+
+        <div class="row" style="margin-top:.75rem">
+          <label for="treeDepthRange">Tree depth</label>
+          <input id="treeDepthRange" type="range" min="1" max="12" step="1" value="8">
+          <span class="tiny mono" id="treeDepthLabel">8</span>
+        </div>
+
+        <div class="svgwrap" style="margin-top:.5rem">
+          <svg id="treeSvg" viewBox="0 0 420 250" aria-label="Trajectory tree"></svg>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Analytics</h2>
+        <div class="kv" id="analyticsKv"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap explain">
+    <div class="card">
+      <h2>Review vs Ends / Ways / Means</h2>
+      <div class="subtle">Quick audit of what we built, what was missing, and what’s corrected in this revision.</div>
+
+      <div class="checkgrid" style="margin-top:.75rem">
+        <div class="checkitem">
+          <div class="checkmark">✓</div>
+          <div>
+            <div><strong>Ends:</strong> “working visuals” — building goes up course-by-course</div>
+            <div class="tiny">Blueprint canvas fills row-by-row; within each course it fills brick-by-brick (micro-steps) so motion is visible.</div>
+          </div>
+        </div>
+
+        <div class="checkitem">
+          <div class="checkmark">✓</div>
+          <div>
+            <div><strong>Ends:</strong> “possible trajectories”</div>
+            <div class="tiny">Right panel shows a branching tree of cw/ccw choices (depth limited) and highlights the realised path prefix.</div>
+          </div>
+        </div>
+
+        <div class="checkitem">
+          <div class="checkmark">✓</div>
+          <div>
+            <div><strong>Ways:</strong> “blueprint gradually filled in”</div>
+            <div class="tiny">The unwrapped cylinder grid is literally a blueprint that becomes filled as courses complete.</div>
+          </div>
+        </div>
+
+        <div class="checkitem">
+          <div class="checkmark">✓</div>
+          <div>
+            <div><strong>Ways:</strong> tangent-bundle intuition</div>
+            <div class="tiny">At each course start, the “tangent fibre” is the discrete choice set {cw, ccw}; a policy selects a direction (vector field).</div>
+          </div>
+        </div>
+
+        <div class="checkitem">
+          <div class="checkmark">✓</div>
+          <div>
+            <div><strong>Means:</strong> interactive single-file HTML</div>
+            <div class="tiny">No external libraries; responsive layout; everything inline.</div>
+          </div>
+        </div>
+
+        <div class="checkitem">
+          <div class="checkmark">✓</div>
+          <div>
+            <div><strong>Means:</strong> robustness checklist</div>
+            <div class="tiny">Critical CSS, placeholder, try/catch boot, toast fallback, watchdog, smoke flags, and status variable.</div>
+          </div>
+        </div>
+
+        <div class="checkitem">
+          <div class="warnmark checkmark">!</div>
+          <div>
+            <div><strong>Not yet (deliberate):</strong> sheaves/lenses composition across multiple subprojects</div>
+            <div class="tiny">This toy isolates one “subsystem” (course placement). Next step is to add a second subsystem and compose via a wiring diagram.</div>
+          </div>
+        </div>
+
+        <div class="checkitem">
+          <div class="warnmark checkmark">!</div>
+          <div>
+            <div><strong>Not yet (next extension):</strong> curing/doping constraints as extra state dimensions</div>
+            <div class="tiny">We added a pause-between-courses control (a simple temporal constraint). Full “cooldown states” + doping rules are next.</div>
+          </div>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0">
+
+      <h2>Restatement of the toy model</h2>
+
+      <h3 style="margin-top:.75rem">State and dynamics (macro)</h3>
+      <p class="tiny mono" style="margin:.35rem 0 .75rem 0">
+        S_min  = ℕ × {cw,ccw}<br>
+        I      = {cw,ccw}<br>
+        O      = ℕ<br>
+        read(n,dir) = n<br>
+        update((n,dir), choice) = (n+1, choice)
+      </p>
+      <p class="subtle">
+        This is the “course-by-course” system. The animation tracks additional micro-state (brick index, pause timer)
+        purely for rendering smoothness.
+      </p>
+
+      <h3 style="margin-top:.75rem">Tangent-bundle intuition (discrete)</h3>
+      <p class="subtle">
+        At each course-start state, the “tangent fibre” is the set of allowable next directions. In this base toy it’s always {cw, ccw}.
+        A <em>policy</em> (manual / always cw / alternate / random) is a section that picks one direction at each step.
+      </p>
+
+      <h3 style="margin-top:.75rem">Lens / open-system packaging (informal)</h3>
+      <p class="subtle">
+        The system exposes an output (current course count) and accepts an input (direction choice). We can wire it to other systems by
+        composing on the input/output interface.
+      </p>
+    </div>
+  </section>
+
+  <div class="wrap toastHost" id="toastHost"></div>
+</main>
+
+<script>
+(function(){
+  'use strict';
+
+  const container = document.getElementById('viz-container');
+  const toastHost = document.getElementById('toastHost');
+
+  function toast(msg){
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    toastHost.appendChild(t);
+    setTimeout(()=>{ try{ t.remove(); } catch(_){ } }, 3200);
+  }
+
+  function staticFallback(reason){
+    // lightweight static diagram if interactivity fails
+    const cards = container.querySelectorAll('.grid .card');
+    if(!cards.length) return;
+    const vizCard = cards[0];
+    const existing = document.getElementById('fallbackStatic');
+    if(existing) return;
+
+    const box = document.createElement('div');
+    box.id = 'fallbackStatic';
+    box.style.marginTop = '.75rem';
+    box.className = 'card';
+    box.innerHTML = `
+      <h2>Static fallback</h2>
+      <div class="subtle">Interactive rendering failed. Showing a minimal static “blueprint” sketch instead.</div>
+      <pre class="mono" style="margin:.6rem 0 0 0; padding:.75rem; border:1px solid var(--border); border-radius:.6rem; background:#fff; overflow:auto">
+Layer 3  [■■■■■■■■■■■■■■■■■■■■■■■■]
+Layer 2  [■■■■■■■■■■■■■■■■■■■■■■■■]
+Layer 1  [■■■■■■■■■■■■■■■■■■■■■■■■]
+         cw / ccw choices branch at each layer → 2^n trajectories
+      </pre>
+      <div class="tiny" style="margin-top:.5rem">Reason: <span class="mono"></span></div>
+    `;
+    box.querySelector('.mono:last-child')?.append(reason);
+    vizCard.appendChild(box);
+  }
+
+  function fallback(reason){
+    console.error('Fallback:', reason);
+    container.setAttribute('data-smoke','fallback');
+    window.__canvasStatus = 'fallback';
+    toast('Interactive demo failed: '+String(reason));
+    staticFallback(String(reason));
+  }
+
+  try{
+    // ===== DOM =====
+    const canvas = document.getElementById('blueprintCanvas');
+    const ctx = canvas.getContext('2d');
+    if(!ctx) throw new Error('Canvas 2D context unavailable');
+
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const stepBrickBtn = document.getElementById('stepBrickBtn');
+    const stepCourseBtn = document.getElementById('stepCourseBtn');
+
+    const layersInput = document.getElementById('layersInput');
+    const bricksInput = document.getElementById('bricksInput');
+
+    const brickMsRange = document.getElementById('brickMsRange');
+    const brickMsLabel = document.getElementById('brickMsLabel');
+
+    const pauseMsRange = document.getElementById('pauseMsRange');
+    const pauseMsLabel = document.getElementById('pauseMsLabel');
+
+    const policySelect = document.getElementById('policySelect');
+    const pRow = document.getElementById('pRow');
+    const pRange = document.getElementById('pRange');
+    const pLabel = document.getElementById('pLabel');
+
+    const pickCwBtn = document.getElementById('pickCwBtn');
+    const pickCcwBtn = document.getElementById('pickCcwBtn');
+    const manualHint = document.getElementById('manualHint');
+
+    const phasePill = document.getElementById('phasePill');
+    const progressText = document.getElementById('progressText');
+    const cwCountEl = document.getElementById('cwCount');
+    const ccwCountEl = document.getElementById('ccwCount');
+
+    const timeline = document.getElementById('timeline');
+    const trajString = document.getElementById('trajString');
+
+    const treeSvg = document.getElementById('treeSvg');
+    const treeDepthRange = document.getElementById('treeDepthRange');
+    const treeDepthLabel = document.getElementById('treeDepthLabel');
+
+    const analyticsKv = document.getElementById('analyticsKv');
+
+    // ===== state =====
+    const DPR = window.devicePixelRatio || 1;
+
+    const cfg = {
+      layers: 10,
+      bricksPer: 24,
+      brickMs: 70,
+      pauseMs: 0,
+      policy: 'manual',
+      pCw: 0.5,
+      treeDepth: 8
+    };
+
+    const sim = {
+      courseDone: 0,      // number of completed courses
+      brickInCourse: 0,   // bricks placed in current course
+      currentDir: null,   // 'cw' | 'ccw' for in-progress course, else null
+      pauseLeftMs: 0,     // course-to-course pause
+      choices: []         // per completed course: 'cw' | 'ccw'
+    };
+
+    let running = false;
+    let timer = null;
+    let resumeAfterManualPick = false;
+
+    // ===== utilities =====
+    function fmtInt(n){
+      try{
+        return new Intl.NumberFormat(undefined).format(n);
+      }catch(_){
+        return String(n);
+      }
+    }
+
+    function bigPow2(k){
+      try{
+        return (2n ** BigInt(k)).toString();
+      }catch(_){
+        // fallback: approximate
+        return '~'+String(Math.pow(2,k));
+      }
+    }
+
+    function setPhase(text){ phasePill.textContent = text; }
+
+    function pickPolicyDir(courseIndex){
+      switch(cfg.policy){
+        case 'always_cw': return 'cw';
+        case 'always_ccw': return 'ccw';
+        case 'alternate': return (courseIndex % 2 === 0) ? 'cw' : 'ccw';
+        case 'random': return (Math.random() < cfg.pCw) ? 'cw' : 'ccw';
+        case 'manual':
+        default: return null;
+      }
+    }
+
+    function ensureCanvasSize(){
+      // reserve aspect ratio based on bricks/layers so layout doesn't jump
+      canvas.style.setProperty('--aspect', `${cfg.bricksPer} / ${cfg.layers}`);
+
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(320, rect.width);   // guard against 0 on first paint
+      const h = Math.max(220, rect.height);
+
+      canvas.width = Math.floor(w * DPR);
+      canvas.height = Math.floor(h * DPR);
+    }
+
+    // ===== rendering =====
+    function drawBlueprint(){
+      ensureCanvasSize();
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0,0,W,H);
+
+      // background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,W,H);
+
+      const pad = Math.round(14 * DPR);
+      const usableW = Math.max(1, W - 2*pad);
+      const usableH = Math.max(1, H - 2*pad);
+
+      const cellW = usableW / cfg.bricksPer;
+      const cellH = usableH / cfg.layers;
+
+      // grid + fills
+      for(let layer=0; layer<cfg.layers; layer++){
+        const rowFromTop = (cfg.layers - 1 - layer);
+        const y = pad + rowFromTop * cellH;
+
+        // determine fill for this row
+        let rowDir = null;
+        let filledCount = 0;
+        let partial = false;
+
+        if(layer < sim.courseDone){
+          rowDir = sim.choices[layer];
+          filledCount = cfg.bricksPer;
+        }else if(layer === sim.courseDone){
+          rowDir = sim.currentDir;
+          filledCount = sim.brickInCourse;
+          partial = true;
+        }else{
+          rowDir = null;
+          filledCount = 0;
+        }
+
+        // row highlight (current in-progress row)
+        if(layer === sim.courseDone && sim.courseDone < cfg.layers){
+          ctx.save();
+          ctx.fillStyle = 'rgba(124,58,237,0.06)'; // in-progress tint
+          ctx.fillRect(pad-2*DPR, y-2*DPR, usableW+4*DPR, cellH+4*DPR);
+          ctx.restore();
+        }
+
+        for(let col=0; col<cfg.bricksPer; col++){
+          const x = pad + col * cellW;
+
+          // determine if this brick is filled
+          let isFilled = false;
+          if(rowDir && filledCount>0){
+            if(rowDir === 'cw'){
+              isFilled = (col < filledCount);
+            }else{
+              isFilled = (col >= cfg.bricksPer - filledCount);
+            }
+          }
+
+          // fill
+          if(isFilled){
+            if(rowDir === 'cw'){
+              ctx.fillStyle = partial ? 'rgba(194,65,12,0.55)' : 'rgba(194,65,12,0.78)';
+            }else{
+              ctx.fillStyle = partial ? 'rgba(29,78,216,0.55)' : 'rgba(29,78,216,0.78)';
+            }
+            ctx.fillRect(x, y, cellW, cellH);
+          }else{
+            // empty but keep subtle background for future rows
+            ctx.fillStyle = (layer > sim.courseDone) ? '#fbfbfc' : '#f3f4f6';
+            ctx.fillRect(x, y, cellW, cellH);
+          }
+
+          // cell border
+          ctx.strokeStyle = '#eceef1';
+          ctx.lineWidth = Math.max(1, Math.round(1 * DPR));
+          ctx.strokeRect(x, y, cellW, cellH);
+        }
+
+        // row label (left)
+        ctx.fillStyle = '#667085';
+        ctx.font = `${Math.max(10, Math.round(11*DPR))}px ui-monospace, monospace`;
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(layer+1), Math.max(2*DPR, pad - 10*DPR), y + cellH/2);
+      }
+
+      // seam indicator at col 0
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+      ctx.lineWidth = Math.max(1, Math.round(2 * DPR));
+      ctx.beginPath();
+      ctx.moveTo(pad, pad);
+      ctx.lineTo(pad, H - pad);
+      ctx.stroke();
+      ctx.restore();
+
+      // pause overlay
+      if(sim.pauseLeftMs > 0){
+        ctx.save();
+        ctx.fillStyle = 'rgba(17,24,39,0.10)';
+        ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = '#111827';
+        ctx.font = `${Math.max(12, Math.round(13*DPR))}px ui-monospace, monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`curing pause: ${Math.ceil(sim.pauseLeftMs/100)/10}s`, W/2, H/2);
+        ctx.restore();
+      }
+    }
+
+    function renderTimeline(){
+      timeline.innerHTML = '';
+      for(let i=0;i<cfg.layers;i++){
+        const cell = document.createElement('div');
+        cell.className = 'tlcell';
+        if(i < sim.courseDone){
+          cell.classList.add(sim.choices[i]);
+        }else if(i === sim.courseDone && (sim.currentDir || sim.brickInCourse>0)){
+          cell.classList.add('inprog');
+          if(sim.currentDir) cell.classList.add(sim.currentDir);
+        }
+        timeline.appendChild(cell);
+      }
+    }
+
+    function renderTrajectoryString(){
+      const map = d => (d==='cw' ? '↻' : '↺');
+      const prefix = sim.choices.map(map).join('');
+      const inprog = sim.currentDir ? map(sim.currentDir) : '';
+      trajString.textContent = (prefix + inprog) || '—';
+    }
+
+    function renderCounts(){
+      const cw = sim.choices.filter(d=>d==='cw').length + (sim.currentDir==='cw' ? 1 : 0);
+      const ccw = sim.choices.filter(d=>d==='ccw').length + (sim.currentDir==='ccw' ? 1 : 0);
+      cwCountEl.textContent = `cw: ${cw}`;
+      ccwCountEl.textContent = `ccw: ${ccw}`;
+    }
+
+    function renderProgress(){
+      const totalBricks = cfg.layers * cfg.bricksPer;
+      const doneBricks = sim.courseDone * cfg.bricksPer + sim.brickInCourse;
+      const pct = Math.round(100 * doneBricks / Math.max(1,totalBricks));
+      const courseText = `${sim.courseDone}/${cfg.layers} courses`;
+      const brickText  = `${doneBricks}/${totalBricks} bricks`;
+      progressText.textContent = `${courseText} • ${brickText} • ${pct}%`;
+    }
+
+    function renderManualHint(){
+      if(cfg.policy !== 'manual'){
+        manualHint.textContent = 'Auto policy selected. Manual direction buttons are disabled.';
+        pickCwBtn.disabled = true;
+        pickCcwBtn.disabled = true;
+        return;
+      }
+      pickCwBtn.disabled = false;
+      pickCcwBtn.disabled = false;
+
+      if(sim.courseDone >= cfg.layers){
+        manualHint.textContent = 'Complete.';
+      }else if(sim.currentDir === null && sim.brickInCourse === 0 && sim.pauseLeftMs===0){
+        manualHint.textContent = 'Choose cw or ccw to start the next course.';
+      }else if(sim.currentDir !== null){
+        manualHint.textContent = `Course in progress: direction locked to ${sim.currentDir}.`;
+      }else if(sim.pauseLeftMs>0){
+        manualHint.textContent = 'Waiting between courses (pause/cure).';
+      }else{
+        manualHint.textContent = '—';
+      }
+    }
+
+    function drawTree(){
+      const svg = treeSvg;
+      svg.innerHTML = '';
+
+      const depth = Math.max(1, Math.min(cfg.treeDepth, cfg.layers));
+      const W = 420, H = 250;
+
+      // geometry
+      const topPad = 18, bottomPad = 16, leftPad = 14, rightPad = 14;
+      const usableW = W - leftPad - rightPad;
+      const usableH = H - topPad - bottomPad;
+
+      function nodePos(level, index){
+        const count = 1 << level; // 2^level
+        const x = leftPad + (index + 0.5) * (usableW / count);
+        const y = topPad + (level + 0.5) * (usableH / (depth + 0.5));
+        return {x,y};
+      }
+
+      // highlight path dirs: completed + maybe current in-progress
+      const pathDirs = sim.choices.slice(0, depth);
+      if(sim.currentDir && pathDirs.length < depth) pathDirs.push(sim.currentDir);
+      const pathLen = Math.min(pathDirs.length, depth);
+
+      // build a set of highlighted edges: key "l,i,bit"
+      const hi = new Set();
+      let idx = 0;
+      for(let l=0; l<pathLen; l++){
+        const bit = (pathDirs[l] === 'cw') ? 0 : 1;
+        hi.add(`${l},${idx},${bit}`);
+        idx = 2*idx + bit;
+      }
+      const currentNode = {level: pathLen, index: idx};
+
+      // edges
+      for(let l=0; l<depth; l++){
+        const count = 1 << l;
+        for(let i=0; i<count; i++){
+          const p = nodePos(l,i);
+          for(let bit=0; bit<2; bit++){
+            const c = nodePos(l+1, 2*i + bit);
+            const key = `${l},${i},${bit}`;
+            const isHi = hi.has(key);
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+            line.setAttribute('x1', p.x); line.setAttribute('y1', p.y);
+            line.setAttribute('x2', c.x); line.setAttribute('y2', c.y);
+            line.setAttribute('stroke', isHi ? (bit===0 ? 'rgba(194,65,12,0.95)' : 'rgba(29,78,216,0.95)') : 'rgba(148,163,184,0.55)');
+            line.setAttribute('stroke-width', isHi ? '2.8' : '1.2');
+            line.setAttribute('stroke-linecap','round');
+            svg.appendChild(line);
+          }
+        }
+      }
+
+      // nodes
+      for(let l=0; l<=depth; l++){
+        const count = 1 << l;
+        for(let i=0; i<count; i++){
+          const p = nodePos(l,i);
+          const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          circ.setAttribute('cx', p.x); circ.setAttribute('cy', p.y);
+          circ.setAttribute('r', (l===currentNode.level && i===currentNode.index) ? '5.4' : '3.4');
+          circ.setAttribute('fill', (l===currentNode.level && i===currentNode.index) ? 'rgba(124,58,237,0.95)' : 'rgba(100,116,139,0.85)');
+          svg.appendChild(circ);
+        }
+      }
+
+      // legend
+      const legend = document.createElementNS('http://www.w3.org/2000/svg','text');
+      legend.setAttribute('x', leftPad);
+      legend.setAttribute('y', H - 8);
+      legend.setAttribute('fill', 'rgba(102,112,133,0.95)');
+      legend.setAttribute('font-size', '11');
+      legend.textContent = 'Left branch = cw (↻), right branch = ccw (↺). Purple node = current prefix.';
+      svg.appendChild(legend);
+    }
+
+    function renderAnalytics(){
+      const totalBricks = cfg.layers * cfg.bricksPer;
+      const doneBricks = sim.courseDone * cfg.bricksPer + sim.brickInCourse;
+      const remaining = totalBricks - doneBricks;
+
+      const possible = bigPow2(cfg.layers);
+      const courseState = sim.courseDone >= cfg.layers
+        ? 'done'
+        : (sim.pauseLeftMs>0 ? 'pause' : (sim.currentDir ? `building (${sim.currentDir})` : 'ready'));
+
+      const kv = [
+        ['Macro state (course)', `${sim.courseDone}/${cfg.layers}`],
+        ['Micro state (brick)', `${sim.brickInCourse}/${cfg.bricksPer}`],
+        ['Phase', courseState],
+        ['Bricks remaining', fmtInt(Math.max(0,remaining))],
+        ['Possible full trajectories', possible],
+        ['Policy (= vector field)', cfg.policy + (cfg.policy==='random' ? ` (p(cw)=${cfg.pCw.toFixed(2)})` : '')]
+      ];
+
+      analyticsKv.innerHTML = '';
+      for(const [k,v] of kv){
+        const a = document.createElement('div'); a.textContent = k;
+        const b = document.createElement('div'); b.className='mono'; b.textContent = v;
+        analyticsKv.appendChild(a); analyticsKv.appendChild(b);
+      }
+    }
+
+    function renderAll(){
+      drawBlueprint();
+      renderTimeline();
+      renderTrajectoryString();
+      renderCounts();
+      renderProgress();
+      renderManualHint();
+      drawTree();
+      renderAnalytics();
+
+      // phase pill
+      if(sim.courseDone >= cfg.layers){
+        setPhase('complete');
+      }else if(sim.pauseLeftMs > 0){
+        setPhase('curing pause');
+      }else if(sim.currentDir){
+        setPhase(`building (${sim.currentDir})`);
+      }else{
+        setPhase('ready');
+      }
+    }
+
+    // ===== stepping =====
+    function maybeAutoPickDir(){
+      if(sim.currentDir !== null) return true;
+      if(sim.pauseLeftMs > 0) return false;
+
+      const d = pickPolicyDir(sim.courseDone);
+      if(d === null){
+        return false; // manual required
+      }
+      sim.currentDir = d;
+      return true;
+    }
+
+    function placeOneBrick(){
+      if(sim.courseDone >= cfg.layers) return { progressed:false, reason:'done' };
+
+      // handle pause
+      if(sim.pauseLeftMs > 0){
+        sim.pauseLeftMs = Math.max(0, sim.pauseLeftMs - cfg.brickMs);
+        return { progressed:true, reason:'pause_tick' };
+      }
+
+      // ensure direction
+      if(sim.currentDir === null){
+        if(!maybeAutoPickDir()){
+          return { progressed:false, reason:'manual_needed' };
+        }
+      }
+
+      // place a brick
+      sim.brickInCourse += 1;
+
+      // complete course?
+      if(sim.brickInCourse >= cfg.bricksPer){
+        sim.choices.push(sim.currentDir);
+        sim.courseDone += 1;
+        sim.brickInCourse = 0;
+        sim.currentDir = null;
+
+        if(cfg.pauseMs > 0 && sim.courseDone < cfg.layers){
+          sim.pauseLeftMs = cfg.pauseMs;
+        }
+        return { progressed:true, reason:'course_done' };
+      }
+      return { progressed:true, reason:'brick' };
+    }
+
+    function stepBrick(){
+      const before = `${sim.courseDone}|${sim.brickInCourse}|${sim.currentDir}|${sim.pauseLeftMs}`;
+      const r = placeOneBrick();
+      const after  = `${sim.courseDone}|${sim.brickInCourse}|${sim.currentDir}|${sim.pauseLeftMs}`;
+      renderAll();
+
+      if(!r.progressed && r.reason==='manual_needed'){
+        toast('Manual mode: pick cw or ccw to start the next course.');
+      }
+
+      return { progressed: before !== after, reason:r.reason };
+    }
+
+    function stepCourse(){
+      if(sim.courseDone >= cfg.layers){
+        renderAll();
+        return;
+      }
+
+      // if pause, burn it down first
+      if(sim.pauseLeftMs > 0){
+        // consume pause in one go
+        sim.pauseLeftMs = 0;
+      }
+
+      // if manual needs direction, prompt
+      if(cfg.policy === 'manual' && sim.currentDir === null && sim.brickInCourse===0){
+        renderAll();
+        toast('Manual mode: pick cw or ccw to start the next course.');
+        return;
+      }
+
+      // ensure dir then run bricks to finish course
+      if(sim.currentDir === null && !maybeAutoPickDir()){
+        renderAll();
+        toast('Manual mode: pick cw or ccw to start the next course.');
+        return;
+      }
+
+      const targetCourse = sim.courseDone;
+      let guard = cfg.bricksPer + 5;
+      while(sim.courseDone === targetCourse && guard-- > 0){
+        placeOneBrick();
+      }
+      renderAll();
+    }
+
+    function stop(){
+      running = false;
+      if(timer){ clearInterval(timer); timer=null; }
+    }
+
+    function start(){
+      if(running) return;
+      running = true;
+      if(timer) clearInterval(timer);
+      timer = setInterval(()=>{
+        const r = stepBrick();
+        // If we hit manual-needed while running, pause and await user choice
+        if(cfg.policy==='manual' && !r.progressed && r.reason==='manual_needed'){
+          resumeAfterManualPick = true;
+          stop();
+        }
+        // If done, stop
+        if(sim.courseDone >= cfg.layers){
+          toast('Finished!');
+          stop();
+        }
+      }, cfg.brickMs);
+    }
+
+    function reset(){
+      stop();
+      sim.courseDone = 0;
+      sim.brickInCourse = 0;
+      sim.currentDir = null;
+      sim.pauseLeftMs = 0;
+      sim.choices = [];
+      resumeAfterManualPick = false;
+      renderAll();
+    }
+
+    function applyCfgFromUI(){
+      const L = Math.max(1, Math.min(40, parseInt(layersInput.value||'10',10)));
+      const B = Math.max(6, Math.min(72, parseInt(bricksInput.value||'24',10)));
+      cfg.layers = L;
+      cfg.bricksPer = B;
+
+      cfg.brickMs = parseInt(brickMsRange.value,10);
+      cfg.pauseMs = parseInt(pauseMsRange.value,10);
+
+      cfg.policy = policySelect.value;
+
+      cfg.treeDepth = parseInt(treeDepthRange.value,10);
+      cfg.pCw = parseInt(pRange.value,10)/100;
+
+      brickMsLabel.textContent = `${cfg.brickMs}ms`;
+      pauseMsLabel.textContent = `${cfg.pauseMs}ms`;
+      pLabel.textContent = cfg.pCw.toFixed(2);
+      treeDepthLabel.textContent = String(cfg.treeDepth);
+
+      pRow.style.display = (cfg.policy==='random') ? 'flex' : 'none';
+
+      // enabling manual buttons handled in renderManualHint()
+    }
+
+    // ===== manual direction buttons =====
+    function manualPick(dir){
+      if(cfg.policy !== 'manual'){
+        toast('Switch policy to “Manual” to pick directions.');
+        return;
+      }
+      if(sim.pauseLeftMs > 0){
+        toast('Currently in pause/cure. Wait until it ends or step.');
+        return;
+      }
+      if(sim.courseDone >= cfg.layers){
+        toast('Already complete.');
+        return;
+      }
+      if(sim.currentDir !== null && sim.currentDir !== dir){
+        toast('Direction is locked for the current course. Finish it, then choose next course direction.');
+        return;
+      }
+
+      // if course not started, set direction and place first brick immediately for responsiveness
+      if(sim.currentDir === null){
+        sim.currentDir = dir;
+        // if we paused waiting for manual choice, resume playback
+        if(resumeAfterManualPick){
+          resumeAfterManualPick = false;
+          start();
+        }else{
+          // do one brick to give immediate feedback
+          stepBrick();
+        }
+        return;
+      }
+
+      // if direction matches, place a brick
+      stepBrick();
+    }
+
+    // ===== wiring: UI events =====
+    function wire(){
+      playBtn.addEventListener('click', ()=>{ applyCfgFromUI(); start(); });
+      pauseBtn.addEventListener('click', ()=>{ stop(); renderAll(); });
+      resetBtn.addEventListener('click', ()=>{ applyCfgFromUI(); reset(); });
+
+      stepBrickBtn.addEventListener('click', ()=>{ applyCfgFromUI(); stop(); stepBrick(); });
+      stepCourseBtn.addEventListener('click', ()=>{ applyCfgFromUI(); stop(); stepCourse(); });
+
+      pickCwBtn.addEventListener('click', ()=>{ applyCfgFromUI(); manualPick('cw'); });
+      pickCcwBtn.addEventListener('click', ()=>{ applyCfgFromUI(); manualPick('ccw'); });
+
+      layersInput.addEventListener('change', ()=>{ applyCfgFromUI(); reset(); });
+      bricksInput.addEventListener('change', ()=>{ applyCfgFromUI(); reset(); });
+
+      brickMsRange.addEventListener('input', ()=>{
+        applyCfgFromUI();
+        if(running){ stop(); start(); }
+        renderAll();
+      });
+
+      pauseMsRange.addEventListener('input', ()=>{
+        applyCfgFromUI();
+        renderAll();
+      });
+
+      policySelect.addEventListener('change', ()=>{
+        applyCfgFromUI();
+        // if switching to auto policy and we're stalled at course start, we can continue
+        if(cfg.policy !== 'manual' && sim.currentDir===null && sim.pauseLeftMs===0 && sim.courseDone<cfg.layers){
+          // if running was paused waiting for manual, resume
+          if(resumeAfterManualPick){ resumeAfterManualPick=false; start(); }
+        }
+        renderAll();
+      });
+
+      pRange.addEventListener('input', ()=>{
+        applyCfgFromUI();
+        renderAll();
+      });
+
+      treeDepthRange.addEventListener('input', ()=>{
+        applyCfgFromUI();
+        renderAll();
+      });
+
+      window.addEventListener('resize', ()=>{ renderAll(); });
+
+      // keyboard shortcuts
+      window.addEventListener('keydown', (e)=>{
+        if(e.code==='Space'){
+          e.preventDefault();
+          applyCfgFromUI();
+          if(running) { stop(); renderAll(); }
+          else { start(); }
+        }
+        if(e.code==='ArrowRight' && !e.shiftKey){
+          e.preventDefault();
+          applyCfgFromUI();
+          stop();
+          stepBrick();
+        }
+        if(e.code==='ArrowRight' && e.shiftKey){
+          e.preventDefault();
+          applyCfgFromUI();
+          stop();
+          stepCourse();
+        }
+      });
+    }
+
+    // ===== init =====
+    applyCfgFromUI();
+    reset();
+    wire();
+
+    // success signal: set smoke on main container AND a descendant (for watchdog spec)
+    container.setAttribute('data-smoke','ok');
+    const smoke = document.createElement('span');
+    smoke.setAttribute('data-smoke','ok');
+    smoke.style.display='none';
+    container.appendChild(smoke);
+    window.__canvasStatus = 'ready';
+
+  }catch(err){
+    fallback(err);
+  }
+
+  // ===== watchdog =====
+  const max = parseInt(container.getAttribute('data-timeout')||'3000',10);
+  let elapsed = 0;
+  const watchdog = setInterval(()=>{
+    const okDesc = container.querySelector('[data-smoke="ok"]');
+    if(okDesc){
+      clearInterval(watchdog);
+      return;
+    }
+    elapsed += 500;
+    if(elapsed >= max){
+      clearInterval(watchdog);
+      fallback('timeout');
+    }
+  }, 500);
+
+})();
+</script>
+</body>
+</html>
