@@ -90,6 +90,16 @@
       color: var(--muted);
     }
 
+    .pillLink{
+      text-decoration: none;
+      transition: color .2s ease, border-color .2s ease;
+    }
+
+    .pillLink:hover{
+      color: var(--text);
+      border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+
     .levelGroup{
       display:flex;
       gap: 8px;
@@ -413,6 +423,7 @@
         </div>
       </div>
       <div class="levelGroup">
+        <a class="pill pillLink" href="index.html">← Back to apps index</a>
         <span class="pill" title="This changes the amount of explanation shown">Explainer level</span>
         <div class="segmented" role="group" aria-label="Explainer level">
           <button id="lvl0" aria-pressed="false" type="button">Intro</button>
