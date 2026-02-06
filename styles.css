@@ -56,20 +56,50 @@ h1 {
   min-width: 260px;
 }
 
-.search span {
+.search span,
+.sort span {
   display: block;
   font-size: 0.85rem;
   color: #5b5f79;
   margin-bottom: 6px;
 }
 
-.search input {
+.search-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search input,
+.sort select {
   width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid #d5d7e5;
   font-size: 0.95rem;
   background: #fff;
+  font-family: inherit;
+}
+
+.clear {
+  border: 1px solid #d5d7e5;
+  background: #fff;
+  color: #2f3f9b;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clear:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.clear:not(:disabled):hover {
+  border-color: #b1b7d9;
+  box-shadow: 0 4px 12px rgba(20, 20, 43, 0.1);
 }
 
 .status {

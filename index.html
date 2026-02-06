@@ -20,13 +20,27 @@
         <div class="controls">
           <label class="search">
             <span>Search</span>
-            <input type="search" id="search" placeholder="Filter by name, tags, or description" />
+            <div class="search-input">
+              <input
+                type="search"
+                id="search"
+                placeholder="Filter by name, tags, or description"
+              />
+              <button type="button" class="clear" id="clear-search">Clear</button>
+            </div>
+          </label>
+          <label class="sort">
+            <span>Sort by</span>
+            <select id="sort">
+              <option value="index">Index</option>
+              <option value="name">Name</option>
+            </select>
           </label>
         </div>
       </header>
 
       <section>
-        <div class="status" id="status">Loading app index…</div>
+        <div class="status" id="status" role="status" aria-live="polite">Loading app index…</div>
         <div class="grid" id="app-grid" hidden></div>
       </section>
     </main>
@@ -47,6 +61,8 @@
       const statusEl = document.getElementById('status');
       const gridEl = document.getElementById('app-grid');
       const searchEl = document.getElementById('search');
+      const clearEl = document.getElementById('clear-search');
+      const sortEl = document.getElementById('sort');
       const template = document.getElementById('card-template');
 
       const parseCsvLine = (line) => {
@@ -113,14 +129,16 @@
         return clone;
       };
 
-      const render = (entries) => {
+      const render = (entries, total) => {
         gridEl.innerHTML = '';
         if (entries.length === 0) {
-          statusEl.textContent = 'No apps match your search.';
+          statusEl.textContent = total === 0 ? 'No apps are available.' : 'No apps match your search.';
           gridEl.hidden = true;
           return;
         }
-        statusEl.textContent = `${entries.length} app${entries.length === 1 ? '' : 's'} listed.`;
+        statusEl.textContent = `Showing ${entries.length} of ${total} app${
+          total === 1 ? '' : 's'
+        }.`;
         gridEl.hidden = false;
         entries.forEach((entry) => {
           gridEl.appendChild(buildCard(entry));
@@ -145,10 +163,23 @@
             const filtered = query
               ? normalized.filter((entry) => entry.haystack.includes(query))
               : normalized;
-            render(filtered);
+            const sorted = [...filtered].sort((a, b) => {
+              if (sortEl.value === 'name') {
+                return a.name.localeCompare(b.name);
+              }
+              return Number(a.index) - Number(b.index);
+            });
+            clearEl.disabled = query.length === 0;
+            render(sorted, normalized.length);
           };
 
           searchEl.addEventListener('input', update);
+          sortEl.addEventListener('change', update);
+          clearEl.addEventListener('click', () => {
+            searchEl.value = '';
+            searchEl.focus();
+            update();
+          });
           update();
         } catch (error) {
           statusEl.textContent = error.message;
