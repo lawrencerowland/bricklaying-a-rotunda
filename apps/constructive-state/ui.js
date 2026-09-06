@@ -111,7 +111,7 @@ $('play').addEventListener('click', () => { if (timer) return stop(); playPath(f
 $('site-play').addEventListener('click',()=>{if(timer){sitePaused=true;stop();}else{sitePaused=false;playPath(true);}});
 $('site-restart').addEventListener('click',()=>{at=0;motionPhase=0;sitePaused=false;drawPath();if(!reducedMotion.matches)playPath(true);});
 $('site-position').addEventListener('input',()=>{sitePaused=true;at=Number($('site-position').value);drawPath();});
-$('site-details').addEventListener('click',()=>showPanel('build'));
+$('site-details').addEventListener('click',()=>{drawPath();showPanel('build');});
 $('take').addEventListener('click', () => { const index = trace[at].state, edge = model.g.edges[index][Number($('manual').value)]; if (!edge) return; const head = trace.slice(0, at + 1); const tail = C.trajectory(model.g, model.p, model.solution, edge.to, $('preference').value); tail[0].action = edge.action; trace = head.concat(tail); at = head.length; drawPath(); });
 $('local-claim').addEventListener('change', checkGlue); $('pool-claim').addEventListener('change', checkGlue);
 $('context-test').addEventListener('click', () => {

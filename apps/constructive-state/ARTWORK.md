@@ -6,7 +6,7 @@
 
 The image provides the landscape, track, material stacks and flush ground-pad outlines. `scene.js` adds a functional projection of the existing model: placed sectors, curing, in-progress lifts and one or two hoists. The overlay shares the same state, generated route and replay position as “Build & paths”. No transition laws are changed. Brick texture, scenic proportions and hoist travel are illustrative: they add no work, travel time, structural claim or resource demand. Each model sector depicts a chunk of brickwork; the ground pads are outside the modelled construction.
 
-The loop opens partway through the route so the cylindrical form is immediately visible. Pause, scrub, restart and “Inspect this moment” expose the same generated path. A reduced-motion preference prevents automatic playback.
+The loop opens partway through the route so the cylindrical form is immediately visible. Pause, scrub, restart and “Inspect current tick” expose the same generated path. During a lift, the handoff returns to the current tick boundary, not a fractional animation state. A reduced-motion preference prevents automatic playback.
 
 ## Exact image-generation prompt
 
