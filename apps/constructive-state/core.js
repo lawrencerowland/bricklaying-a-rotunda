@@ -169,67 +169,6 @@
     while (g.parents[i]) { const p = g.parents[i]; out[out.length - 1].action = p.action; i = p.from; out.push({ state: i, action: null }); }
     return out.reverse();
   }
-  function localCatalog(c, site) {
-    const states = [blank(c)], seen = new Set([key(states[0])]);
-    for (let i = 0; i < states.length; i++) for (const command of frontOptions(states[i], c, site)) {
-      const n = frontTick(states[i], command, c, site), k = key(n);
-      if (!seen.has(k)) { seen.add(k); states.push(n); }
-    }
-    return states;
-  }
-  function glue(sections) {
-    const assignment = {}, errors = [];
-    for (const section of sections) for (const [variable, value] of Object.entries(section)) {
-      if (Object.prototype.hasOwnProperty.call(assignment, variable) && key(assignment[variable]) !== key(value)) errors.push(variable);
-      else assignment[variable] = value;
-    }
-    return { assignment, errors: [...new Set(errors)], compatible: errors.length === 0 };
-  }
-  /* The assignment sheaf on subsets of a finite discrete variable set. Values are
-     canonical JSON encodings of members of the declared finite domains. Physical
-     legality is a separate relation, not asserted to be a sheaf on every cover. */
-  function assignmentSheaf(domains) {
-    const variables = Object.keys(domains), allowed = Object.fromEntries(variables.map(v => [v, new Set(domains[v].map(key))]));
-    function section(s) {
-      for (const [v, value] of Object.entries(s)) if (!allowed[v]?.has(key(value))) throw Error('Value outside assignment domain: ' + v);
-      return clone(s);
-    }
-    function restrict(s, subset) {
-      section(s);
-      for (const v of subset) if (!Object.prototype.hasOwnProperty.call(s, v)) throw Error('Restriction is not a subset: ' + v);
-      return Object.fromEntries(subset.map(v => [v, clone(s[v])]));
-    }
-    function match(sections, target = [...new Set(sections.flatMap(s => Object.keys(s)))]) {
-      const result = glue(sections.map(section)), covered = Object.keys(result.assignment);
-      if (target.some(v => !covered.includes(v)) || covered.some(v => !target.includes(v))) throw Error('Patches do not cover exactly the requested variables');
-      return result;
-    }
-    return { variables, section, restrict, glue: match };
-  }
-  function staticJoin(g) {
-    const a = localCatalog(g.c, 0), b = localCatalog(g.c, 1);
-    const sheaf = assignmentSheaf({ 'front.A': a, 'front.B': b, 'reserve.A': [false, true], 'reserve.B': [false, true] });
-    const pools = [0, 1, 2, 3].filter(owners => pop(owners) <= g.c.capacity);
-    let compatible = 0, reachable = 0, missingInterface = 0, orphan = null;
-    for (const fa of a) for (const fb of b) {
-      let matched = false;
-      for (const owners of pools) {
-        const joined = sheaf.glue([
-          { 'front.A': fa, 'reserve.A': Boolean(fa.job) },
-          { 'front.B': fb, 'reserve.B': Boolean(fb.job) },
-          { 'reserve.A': Boolean(owners & 1), 'reserve.B': Boolean(owners & 2) }
-        ], sheaf.variables);
-        if (!joined.compatible) continue;
-        matched = true; compatible++;
-        const s = { fronts: [joined.assignment['front.A'], joined.assignment['front.B']], owners };
-        if (g.lookup.has(key(s))) reachable++;
-        else if (!orphan) orphan = clone(s);
-      }
-      if (!matched) missingInterface++;
-    }
-    if (reachable !== g.states.length) throw Error('Reachable state failed the declared gluing and capacity constraints');
-    return { localA: a.length, localB: b.length, rawPairs: a.length * b.length, compatible, reachable, missingInterface, orphan };
-  }
   function verifyQuotient(g, p, solution) {
     let transitions = 0, policyLifts = 0;
     for (let i = 0; i < g.states.length; i++) {
@@ -243,7 +182,7 @@
   }
   function analyse(input = {}, mode = 'blueprint') {
     const g = graph(input), p = refine(g, mode), solution = solve(g, p), verification = verifyQuotient(g, p, solution);
-    return { g, p, solution, verification, join: staticJoin(g), trace: trajectory(g, p, solution) };
+    return { g, p, solution, verification, trace: trajectory(g, p, solution) };
   }
-  return { defaults, config, initial, blank, key, pop, full, frontOptions, frontTick, poolTick, actionId, actionName, actions, wireTick, isGoal, graph, observation, partition, conflict, refine, solve, trajectory, routeTo, glue, assignmentSheaf, localCatalog, staticJoin, verifyQuotient, analyse };
+  return { defaults, config, initial, blank, key, pop, full, frontOptions, frontTick, poolTick, actionId, actionName, actions, wireTick, isGoal, graph, observation, partition, conflict, refine, solve, trajectory, routeTo, verifyQuotient, analyse };
 });

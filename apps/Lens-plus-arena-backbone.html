@@ -33,6 +33,15 @@
 
     .min-h-64{ min-height: 16rem; }
     .app{ width: 100%; }
+    main, .card, .grid2 > *, .controls, .canvasGrid, .controlRow > *, .stat { min-width: 0; }
+    .card, .stat, .log, .mono { overflow-wrap: anywhere; }
+    input, select, textarea { min-width: 0; max-width: 100%; font: inherit; }
+    button { max-width: 100%; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+    .validation { color: #991b1b; background: #fef2f2; border-radius: 8px; padding: .65rem; }
+    .canvasWrap.wide { min-height: 180px; }
+    @media (max-width: 519px) { main { padding: .6rem; } .card { padding: .75rem; } .pill { white-space: normal; } }
 
     header{
       background: var(--ink);
@@ -380,9 +389,9 @@
             </p>
           </div>
           <div class="inline">
-            <span class="pill">v2.0</span>
+            <span class="pill">Repaired model</span>
             <span class="pill"><span style="color:var(--good);">●</span> improved analytics</span>
-            <span class="pill"><span style="color:var(--accent);">●</span> corrected lens wiring</span>
+            <span class="pill"><span style="color:var(--accent);">●</span> explicit input / readout / update</span>
           </div>
         </div>
 
@@ -390,7 +399,7 @@
           <summary>What was corrected + improved</summary>
           <div class="inner">
             <ul style="margin:.4rem 0 0 1.1rem; padding:0;">
-              <li><b>Corrected lens wording</b> to match the passforward/passback (“Myers-style”) lens shape and the “system-as-lens” doctrine narrative.</li>
+              <li><b>Explicit dynamics</b>: distinguish initial parameters, allowed actions, readout and state update. The conceptual connection to Myers is scoped below, not a claim of implemented modular composition.</li>
               <li><b>Brick model clarified</b>: each course’s doping affects (i) curing delay after that course and (ii) direction constraint for the next course.</li>
               <li><b>Added real planning analytics</b>: total feasible plans, switch-count histogram, min/mean/max switches, and time estimates including setup penalties.</li>
               <li><b>Circle model improved</b>: analytic visibility windows (entry/exit times) + timeline view, not just sampled logging.</li>
@@ -411,9 +420,9 @@
             </p>
           </div>
           <div class="inline" style="gap:.4rem;">
-            <span class="pill"><span style="color:#9ca3af;">●</span> D0 standard</span>
-            <span class="pill"><span style="color:var(--good);">●</span> D1 fast-cure</span>
-            <span class="pill"><span style="color:var(--bad);">●</span> D2 slow-cure</span>
+            <span class="pill"><span style="color:#9ca3af;">●</span> D0 next direction free</span>
+            <span class="pill"><span style="color:var(--good);">●</span> D1 same next direction</span>
+            <span class="pill"><span style="color:var(--bad);">●</span> D2 opposite next direction</span>
           </div>
         </div>
 
@@ -434,7 +443,7 @@
                 <input id="brickB" type="number" min="6" max="240" value="48">
               </label>
               <label>
-                Start offset on course 1 (0…B−1)
+                Shared start offset on every course (0…B−1)
                 <input id="brickOffset" type="number" min="0" max="239" value="0">
               </label>
               <label>
@@ -442,7 +451,7 @@
                 <input id="brickSwitchPenalty" type="number" min="0" max="20" value="2">
               </label>
               <label>
-                Base cure steps (D0)
+                Base cure steps
                 <input id="brickBaseCure" type="number" min="0" max="20" value="1">
               </label>
               <label>
@@ -450,6 +459,38 @@
                 <input id="brickSlowExtra" type="number" min="0" max="20" value="2">
               </label>
             </div>
+
+            <div class="controlRow">
+              <label>Direction rule
+                <select id="brickDirectionRule">
+                  <option value="doping">Previous-course D0 / D1 / D2 constraints</option>
+                  <option value="free">Unrestricted between courses</option>
+                </select>
+              </label>
+              <label>Direction policy
+                <select id="brickPolicy">
+                  <option value="any">Any feasible directions</option>
+                  <option value="cw">Force clockwise every course</option>
+                  <option value="ccw">Force counter-clockwise every course</option>
+                  <option value="alt">Force alternating, starting clockwise</option>
+                </select>
+              </label>
+              <label>Curing law
+                <select id="brickCureLaw">
+                  <option value="categorical">D0 base / D1 zero / D2 base + extra</option>
+                  <option value="numeric">Numeric: max(0, round(base + β × δ))</option>
+                </select>
+              </label>
+              <label id="brickBetaLabel" hidden>β (numeric curing coefficient)
+                <input id="brickBeta" type="number" min="0" step="any" value="1">
+              </label>
+            </div>
+            <label id="brickNumericLabel" hidden>Numeric doping δ, one finite number per course (JSON array)
+              <textarea id="brickNumericDoping" rows="3" spellcheck="false">[0,1,2,0,1,0,0,0]</textarea>
+              <small class="muted">Exactly N values; negative and fractional values are allowed. These numbers affect curing only, not the separate D0/D1/D2 direction labels.</small>
+            </label>
+            <p class="muted" style="margin:0">The policy restricts the selected direction rule; conflicting choices produce zero feasible plans. Parameters are fixed for each run. Editing them stops and resets the run; valid changes recompute, and invalid entries remain visible for correction.</p>
+            <div id="brickValidation" class="validation" role="alert" hidden></div>
 
             <div class="inline">
               <label class="inline" style="gap:.5rem;">
@@ -466,12 +507,14 @@
               <button id="brickAnimateRandom" class="secondary" title="Animate one random feasible plan">Animate random plan</button>
               <button id="brickPause" class="ghost" title="Pause/resume animation">Pause</button>
               <button id="brickReset" class="ghost" title="Reset build view">Reset</button>
+              <button id="brickLegacy1" class="secondary">Earlier #1 model settings</button>
+              <button id="brickLegacy2" class="secondary">Earlier #2 policy / cure settings</button>
             </div>
 
             <div>
               <h3 style="margin-top:.6rem;">Doping per course</h3>
               <p class="muted" style="margin:.2rem 0 .6rem 0;">
-                D0: next direction free, cure = base. · D1: next direction must stay same, cure = 0. · D2: next direction must flip, cure = base + extra.
+                In the D0/D1/D2 direction rule, D0 frees the next direction, D1 keeps it the same, and D2 forces the opposite. In the categorical curing law these also give base, zero, and base + extra cure. Numeric curing instead uses the separate JSON values.
               </p>
               <div id="dopingGrid" class="dopingGrid" aria-label="Doping grid"></div>
             </div>
@@ -486,6 +529,7 @@
               </div>
             </details>
 
+            <p class="muted" style="margin:0">The rings are an unwrapped course index, not physical support geometry. One model step places a brick or waits one unit; playback accelerates brick placement relative to waiting. Earlier #1 is recovered at course boundaries with setup = 0, offset = 0 and final cure off.</p>
             <h3>Event log</h3>
             <div id="brickLog" class="log" aria-label="Brick event log">Click “Compute plan + analytics”.</div>
           </div>
@@ -539,7 +583,9 @@
               <button id="circReset" class="ghost">Reset</button>
             </div>
 
-            <h3>Outputs (what the “manager” sees)</h3>
+            <div id="circleValidation" class="validation" role="alert" hidden></div>
+            <h3>Predicted observation analytics</h3>
+            <p class="muted" style="margin:0">These windows are predicted from the entered full model, not inferred from observations alone. The grey hidden dot in the drawing is a full-state teaching overlay, not sensor output. Positive angles are clockwise on this screen.</p>
             <div id="circleStats" class="stats"></div>
 
             <div style="margin-top:.6rem;">
@@ -563,6 +609,9 @@
               </div>
             </div>
 
+            <h3>Next five crossings after t = 0</h3>
+            <div id="circleCrossings" class="log" aria-label="Next boundary crossings"></div>
+            <p class="muted" style="margin:0">Crossings are genuine boundary events, independent of the chosen horizon. Window endpoints clipped at 0 or T are labelled as horizon boundaries.</p>
             <h3>Observer log</h3>
             <div id="circleLog" class="log">Click “Compute windows”.</div>
           </div>
@@ -574,82 +623,22 @@
         </div>
       </section>
 
-      <!-- Formal backbone -->
-      <section class="card" aria-label="Formal backbone">
-        <h2>Formal backbone (kept short, but correct)</h2>
-        <p class="muted" style="margin:.2rem 0 .65rem 0;">
-          The demo uses the “system-as-lens” viewpoint: a system has <b>state</b>, <b>outputs</b> it exposes, and <b>inputs/parameters</b> that affect how it evolves.
-          A lens is exactly the tool that wires “what flows forward” and “what is set from the outside” in a composable way.
-        </p>
-
-        <div class="grid2" style="margin-top:.65rem;">
+      <!-- Explicit dynamics and conceptual scope -->
+      <section class="card" aria-label="Dynamics and interface">
+        <h2>What the model actually constructs</h2>
+        <p>The brick model constructs feasible direction plans and expands one into brick-placement, setup and curing transitions. The circle model constructs an exact constant-speed trajectory and its visible time windows. These are specified toy dynamics, not dynamics recovered from a blueprint alone.</p>
+        <div class="grid2">
           <div>
-            <h3>Lens shape (Myers notation)</h3>
-            <div class="muted">
-              A lens <span class="mono">(f♯, f)</span> from <span class="mono">(A− / A+)</span> to <span class="mono">(B− / B+)</span> consists of:
-              <ul style="margin:.35rem 0 0 1.1rem;">
-                <li><span class="mono">f : A+ → B+</span> (passforward)</li>
-                <li><span class="mono">f♯ : A+ × B− → A−</span> (passback)</li>
-              </ul>
-              In words: you pass <b>what’s visible downstream</b>, and you pass <b>parameter-setting / constraints upstream</b>, allowed to depend on what will flow downstream.
-            </div>
-
-            <h3>Systems as lenses</h3>
-            <div class="muted">
-              A (deterministic) system can be packaged as a lens
-              <div class="mono" style="margin:.25rem 0 .25rem 0;">
-                (update, expose) : (State / State) ⇆ (In / Out)
-              </div>
-              and a (differential) system as
-              <div class="mono" style="margin:.25rem 0 .25rem 0;">
-                (update, expose) : (TState / State) ⇆ (In / Out)
-              </div>
-              where <span class="mono">expose</span> tells you what’s visible (outputs) and <span class="mono">update</span> tells you how state changes given chosen inputs/parameters.
-            </div>
+            <h3>State, action, readout, update</h3>
+            <p>For brickwork, the run state includes the course, number of bricks placed, current direction, setup/cure phase and remaining wait. The chosen plan is fixed during playback. At course boundaries, the selected direction rule and policy determine the admissible directions; within a course the next placement or wait is prescribed.</p>
+            <p class="mono">readout : S → O<br>allowed : S → finite sets of actions<br>update : {(s,a) | a ∈ allowed(s)} → S</p>
+            <p>The drawing reads this run state. A policy resolves choices; a trajectory is obtained by iterating updates. Neither a drawing nor a list of direction plans is itself a proof of a compositional interface.</p>
           </div>
-
           <div>
-            <h3>How B is a precursor to A</h3>
-            <p class="muted" style="margin:.2rem 0 .6rem 0;">
-              In B, the “real state” is always moving, but you only observe it when it passes the slot. That separation of
-              <b>full state vs. observed output</b> is exactly what you need before you tackle A, where constraints (doping/curing/setup)
-              mean you can’t freely choose the next action at every step.
-            </p>
-
-            <div class="svgBox" aria-label="Wiring diagram">
-              <svg viewBox="0 0 980 220" role="img" aria-label="Wiring diagram: base circle dynamics composed with slot observer">
-                <defs>
-                  <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-                    <path d="M0,0 L0,6 L9,3 z" fill="#111827"></path>
-                  </marker>
-                </defs>
-
-                <!-- Top flow -->
-                <text x="18" y="30" font-size="14" fill="#111827">State: θ</text>
-                <line x1="18" y1="50" x2="305" y2="50" stroke="#111827" stroke-width="2" marker-end="url(#arr)"/>
-                <rect x="305" y="20" width="260" height="60" rx="12" fill="#eef2ff" stroke="#c7d2fe"/>
-                <text x="320" y="48" font-size="14" fill="#111827">Base dynamics: expose θ, update via ω</text>
-                <line x1="565" y1="50" x2="725" y2="50" stroke="#111827" stroke-width="2" marker-end="url(#arr)"/>
-                <rect x="725" y="20" width="220" height="60" rx="12" fill="#ecfeff" stroke="#a5f3fc"/>
-                <text x="740" y="42" font-size="14" fill="#111827">Slot observer lens</text>
-                <text x="740" y="60" font-size="12" fill="#374151">θ ↦ θ if visible else ⊥</text>
-
-                <line x1="945" y1="50" x2="965" y2="50" stroke="#111827" stroke-width="2" marker-end="url(#arr)"/>
-                <text x="882" y="30" font-size="14" fill="#111827">Output: θ or ⊥</text>
-
-                <!-- Bottom passback -->
-                <text x="18" y="145" font-size="14" fill="#6b7280">Input parameter</text>
-                <line x1="965" y1="165" x2="725" y2="165" stroke="#6b7280" stroke-width="2" marker-end="url(#arr)"/>
-                <text x="848" y="190" font-size="12" fill="#6b7280">passback (keeps ω unchanged)</text>
-                <line x1="725" y1="165" x2="305" y2="165" stroke="#6b7280" stroke-width="2" marker-end="url(#arr)"/>
-                <line x1="305" y1="165" x2="18" y2="165" stroke="#6b7280" stroke-width="2" marker-end="url(#arr)"/>
-                <text x="18" y="190" font-size="12" fill="#6b7280">ω (deg/s)</text>
-
-                <text x="18" y="212" font-size="12" fill="#6b7280">
-                  Composition intuition: base system outputs θ; observer lens transforms the interface to output “seen or not seen”.
-                </text>
-              </svg>
-            </div>
+            <h3>Myers connection, with a boundary</h3>
+            <p>A deterministic system can be described by a readout S → O and update S × I → S. Here admissible actions depend on state, so the displayed allowed/update formulation makes that dependence explicit. This page does not implement a general arena-composition engine or prove that the visible blueprint alone determines the action menu.</p>
+            <p>For the circle, hold ω, r and the slot fixed during a run: θ̇ = ω. Initialisation supplies θ(0); it is not the dynamics update. Readout is θ when inside the slot and ⊥ otherwise. Radius changes geometry, not angular crossing times.</p>
+            <p>The hard visible/null gate is discontinuous at its boundaries. Its output lies in the set of angles plus ⊥; it is not a smooth cotangent pullback. The trajectory is evaluated analytically and the observer code is explicit; no smooth derivative or completed lens-wiring theorem is claimed.</p>
           </div>
         </div>
       </section>
@@ -658,11 +647,13 @@
       <section class="card" aria-label="Export">
         <h2>Export (optional)</h2>
         <p class="muted" style="margin:.2rem 0 .65rem 0;">
-          Use this to copy results into another tool (spreadsheets, project dashboards, simulations).
+          Copy computed results or download the current event log. This page keeps data only in this browser tab; exports are local files or copyable text. Reloading resets the experiment. No server is changed.
         </p>
         <div class="btnRow">
           <button id="exportBrick" class="secondary">Export brick analytics JSON</button>
           <button id="exportCircle" class="secondary">Export visibility windows JSON</button>
+          <button id="exportBrickLog" class="secondary">Export brick event log</button>
+          <button id="exportCircleLog" class="secondary">Export observer log</button>
           <button id="clearExport" class="ghost">Clear</button>
           <span class="pill">Tip: copy from the box</span>
         </div>
@@ -710,6 +701,8 @@
   }
 
   function fallback(reason){
+    if(app.getAttribute("data-smoke") === "failed") return;
+    app.setAttribute("data-smoke", "failed");
     console.error("Fallback:", reason);
     window.__canvasStatus = 'fallback';
     toast("Fallback mode: interactive rendering unavailable.", 'err', String(reason || 'unknown'));
@@ -752,8 +745,8 @@
     const timeout = parseInt(app.getAttribute('data-timeout') || '3000', 10);
     const start = performance.now();
     function check(){
-      const ok = app.querySelector('[data-smoke="ok"]');
-      if(ok) return;
+      const ok = app.getAttribute('data-smoke') === 'ok';
+      if(ok || app.getAttribute("data-smoke") === "failed") return;
       if(performance.now() - start > timeout){
         fallback('timeout');
         return;
@@ -792,8 +785,8 @@
       render(ctx, dims);
     }
 
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
+    if(ro) ro.observe(canvas);
     window.addEventListener('resize', resize, {passive:true});
     resize();
 
@@ -801,7 +794,118 @@
       ctx,
       getDims: ()=>dims,
       render: ()=>render(ctx, dims),
-      destroy: ()=>{ ro.disconnect(); window.removeEventListener('resize', resize); }
+      destroy: ()=>{ if(ro) ro.disconnect(); window.removeEventListener('resize', resize); }
+    };
+  }
+
+  // Pure model functions, shared by the analytics and plan selection.
+  const ModelMath = (function(){
+    function numericDoping(raw, N){
+      let values;
+      try { values = JSON.parse(raw); } catch(_) { throw new Error("Numeric doping must be a JSON array, for example [0, 1, 2]."); }
+      if(!Array.isArray(values) || values.length !== N || !values.every(x=>typeof x === 'number' && Number.isFinite(x))){
+        throw new Error("Numeric doping needs exactly " + N + " finite numbers; nothing has been replaced or repeated.");
+      }
+      return values;
+    }
+    function allowed(cfg, previous, k){
+      let dirs = [1,-1];
+      if(k > 0 && cfg.directionRule === 'doping'){
+        const d = cfg.doping[k-1];
+        dirs = d === 1 ? [previous] : d === 2 ? [-previous] : dirs;
+      }
+      const forced = cfg.policy === 'cw' ? 1 : cfg.policy === 'ccw' ? -1 : cfg.policy === 'alt' ? (k%2===0 ? 1 : -1) : 0;
+      return forced ? dirs.filter(d=>d===forced) : dirs;
+    }
+    function cure(cfg,k){
+      const value = cfg.cureLaw === 'numeric'
+        ? Math.max(0, Math.round(cfg.baseCure + cfg.beta * cfg.numericDoping[k]))
+        : cfg.doping[k] === 1 ? 0 : cfg.doping[k] === 2 ? cfg.baseCure + cfg.slowExtra : cfg.baseCure;
+      if(!Number.isSafeInteger(value) || value < 0) throw new Error("Derived cure duration must be a non-negative safe integer; reduce the numeric doping or β.");
+      return value;
+    }
+    function analytics(cfg){
+      const N=cfg.N;
+      let dp = {1:{},[-1]:{}};
+      for(const d of allowed(cfg,null,0)) dp[d][0] = {count:1,dirs:[d]};
+      for(let k=1;k<N;k++){
+        const next={1:{},[-1]:{}};
+        for(const previous of [1,-1]) for(const d of allowed(cfg,previous,k)){
+          for(const [sw,entry] of Object.entries(dp[previous])){
+            const n=Number(sw)+(d!==previous ? 1 : 0);
+            if(!next[d][n]) next[d][n]={count:0,dirs:entry.dirs.concat(d)};
+            next[d][n].count+=entry.count;
+          }
+        }
+        dp=next;
+      }
+      const hist=Array(N).fill(0);
+      let best=null;
+      for(const d of [1,-1]) for(const [sw,entry] of Object.entries(dp[d])){
+        hist[Number(sw)]+=entry.count;
+        if(!best || Number(sw)<best.minSwitches) best={dirs:entry.dirs,minSwitches:Number(sw)};
+      }
+      const totalPlans=hist.reduce((a,b)=>a+b,0);
+      const occupied=hist.map((n,i)=>n ? i : -1).filter(i=>i>=0);
+      const cureSteps=Array.from({length:N},(_,k)=>cure(cfg,k));
+      const cureTotal=cureSteps.reduce((sum,n,k)=>sum+(!cfg.includeFinalCure && k===N-1 ? 0:n),0);
+      const baseSteps=N*cfg.B+cureTotal;
+      if(!Number.isSafeInteger(baseSteps+cfg.switchPenalty*(N-1))) throw new Error("The total duration exceeds exact integer arithmetic; reduce curing values.");
+      return {N,B:cfg.B,doping:cfg.doping.slice(),totalPlans,choicePoints:totalPlans ? Math.log2(totalPlans):0,
+        histSwitches:hist,minSwitches:occupied.length ? occupied[0]:null,maxSwitches:occupied.length ? occupied[occupied.length-1]:null,
+        meanSwitches:totalPlans ? hist.reduce((sum,n,k)=>sum+n*k,0)/totalPlans:null,
+        baseSteps,courseEventBaseSteps:N+cureTotal,buildSteps:N*cfg.B,cureTotal,cureSteps,switchPenalty:cfg.switchPenalty,bestPlan:best};
+    }
+    function randomPlan(cfg,rng=Math.random){
+      const memo=new Map();
+      function count(k,previous){
+        if(k===cfg.N) return 1;
+        const key=k+":"+previous;
+        if(!memo.has(key)) memo.set(key,allowed(cfg,previous,k).reduce((n,d)=>n+count(k+1,d),0));
+        return memo.get(key);
+      }
+      if(!count(0,0)) return null;
+      const dirs=[];
+      for(let k=0;k<cfg.N;k++){
+        const options=allowed(cfg,dirs[k-1] ?? 0,k);
+        let pick=rng()*count(k,dirs[k-1] ?? 0);
+        for(const d of options){
+          const n=count(k+1,d);
+          if(pick<n){ dirs.push(d);break; }
+          pick-=n;
+        }
+      }
+      return dirs;
+    }
+    function crossings(cfg,limit=5){
+      if(cfg.omega===0 || cfg.delta>=180) return {entries:[],exits:[],reason:cfg.omega===0 ? "Stationary: no crossings." : "Full-circle slot: no boundary crossings."};
+      const period=360/Math.abs(cfg.omega);
+      function times(angle){
+        let phase=mod((angle-cfg.theta0)/cfg.omega,period);
+        if(phase < 1e-10 || period-phase < 1e-10) phase=period;
+        return Array.from({length:limit},(_,i)=>phase+i*period);
+      }
+      return cfg.omega>0
+        ? {entries:times(cfg.phi-cfg.delta),exits:times(cfg.phi+cfg.delta),reason:""}
+        : {entries:times(cfg.phi+cfg.delta),exits:times(cfg.phi-cfg.delta),reason:""};
+    }
+    return {numericDoping,allowed,cure,analytics,randomPlan,crossings};
+  })();
+
+  function readNumber(el,label,min,max,integer=false){
+    const n=Number(el.value);
+    if(el.value.trim()==='' || !Number.isFinite(n) || n<min || n>max || (integer && !Number.isInteger(n))){
+      throw new Error(label+" must be "+(integer ? "a whole number" : "a finite number")+" from "+min+" to "+max+".");
+    }
+    return n;
+  }
+  function showError(el,error){
+    el.textContent=error ? String(error.message || error) : "";
+    el.hidden=!error;
+  }
+  function guarded(fn,errorEl){
+    return function(){
+      try { fn(); } catch(e){ showError(errorEl,e); toast("Please correct the highlighted model inputs.",'warn',e.message); }
     };
   }
 
@@ -817,6 +921,14 @@
       switchPenalty: document.getElementById('brickSwitchPenalty'),
       baseCure: document.getElementById('brickBaseCure'),
       slowExtra: document.getElementById('brickSlowExtra'),
+      directionRule: document.getElementById('brickDirectionRule'),
+      policy: document.getElementById('brickPolicy'),
+      cureLaw: document.getElementById('brickCureLaw'),
+      beta: document.getElementById('brickBeta'),
+      numericDoping: document.getElementById('brickNumericDoping'),
+      error: document.getElementById('brickValidation'),
+      legacy1: document.getElementById('brickLegacy1'),
+      legacy2: document.getElementById('brickLegacy2'),
       includeFinalCure: document.getElementById('brickIncludeFinalCure'),
       dopingGrid: document.getElementById('dopingGrid'),
       stats: document.getElementById('brickStats'),
@@ -831,8 +943,7 @@
       exportBrick: document.getElementById('exportBrick')
     };
 
-    const canvasCtrl = attachCanvas(document.getElementById('brickCanvas'), renderBrick);
-    const histCtrl = attachCanvas(document.getElementById('brickHist'), renderHist);
+    let canvasCtrl, histCtrl;
 
     const model = {
       N: 8,
@@ -842,7 +953,8 @@
       baseCure: 1,
       slowExtra: 2,
       switchPenalty: 2,
-      includeFinalCure: true
+      includeFinalCure: true,
+      directionRule: "doping", policy: "any", cureLaw: "categorical", beta: 1, numericDoping: []
     };
 
     const view = {
@@ -876,42 +988,32 @@
       el.log.textContent = prefix ? prefix + "\n" : "";
     }
 
-    function cureStepsForCourse(d){
-      if(d === 1) return 0; // D1 fast
-      if(d === 2) return model.baseCure + model.slowExtra; // D2 slow
-      return model.baseCure; // D0 standard
-    }
-
-    // Doping influences the NEXT direction constraint:
-    // After finishing course k with direction dir_k:
-    // D0 => next dir free, D1 => next dir same, D2 => next dir flips.
-    function allowedNextDirs(dirCurrent, dopingCurrent){
-      if(dopingCurrent === 1) return [dirCurrent];
-      if(dopingCurrent === 2) return [-dirCurrent];
-      return [1, -1];
-    }
+    function cureStepsForCourse(k){ return ModelMath.cure(model,k); }
 
     function normalizeModelFromUI(){
-      const N = clamp(parseInt(el.N.value || '8', 10), 1, 40);
-      const B = clamp(parseInt(el.B.value || '48', 10), 6, 240);
-      el.offset.max = String(B-1);
-      const offset = clamp(parseInt(el.offset.value || '0', 10), 0, B-1);
-
-      model.N = N;
-      model.B = B;
-      model.offset = offset;
-      model.baseCure = clamp(parseInt(el.baseCure.value || '0', 10), 0, 20);
-      model.slowExtra = clamp(parseInt(el.slowExtra.value || '0', 10), 0, 20);
-      model.switchPenalty = clamp(parseInt(el.switchPenalty.value || '0', 10), 0, 20);
-      model.includeFinalCure = !!el.includeFinalCure.checked;
-
-      // Ensure doping array and grid are aligned
-      ensureDopingGrid();
-      model.doping = readDopingGrid();
+      const N=readNumber(el.N,"Courses",1,40,true);
+      const B=readNumber(el.B,"Bricks per course",6,240,true);
+      el.offset.max=String(B-1);
+      const candidate={
+        N,B,offset:readNumber(el.offset,"Shared start offset",0,B-1,true),
+        baseCure:readNumber(el.baseCure,"Base cure",0,20,true),
+        slowExtra:readNumber(el.slowExtra,"Extra cure",0,20,true),
+        switchPenalty:readNumber(el.switchPenalty,"Setup penalty",0,20,true),
+        includeFinalCure:!!el.includeFinalCure.checked,
+        directionRule:el.directionRule.value,policy:el.policy.value,cureLaw:el.cureLaw.value,
+        beta:el.cureLaw.value==='numeric' ? readNumber(el.beta,"Beta",0,Number.MAX_SAFE_INTEGER):model.beta,
+        numericDoping:el.cureLaw.value==='numeric' ? ModelMath.numericDoping(el.numericDoping.value,N):model.numericDoping.slice()
+      };
+      if(!['doping','free'].includes(candidate.directionRule) || !['any','cw','ccw','alt'].includes(candidate.policy) || !['categorical','numeric'].includes(candidate.cureLaw)) throw new Error("Choose one of the listed model options.");
+      ensureDopingGrid(N);
+      candidate.doping=readDopingGrid();
+      ModelMath.analytics(candidate); // validate derived exact durations before committing.
+      Object.assign(model,candidate);
+      showError(el.error,null);
     }
 
-    function ensureDopingGrid(){
-      const N = clamp(parseInt(el.N.value || '8', 10), 1, 40);
+    function ensureDopingGrid(N=readNumber(el.N,'Courses',1,40,true)){
+      const prior=Array.from(el.dopingGrid.querySelectorAll('select')).map(x=>x.value);
       // Build grid if needed
       const existing = el.dopingGrid.querySelectorAll('select').length;
       if(existing === N) return;
@@ -924,12 +1026,12 @@
         small.textContent = `Course ${i+1}`;
         const sel = document.createElement('select');
         sel.innerHTML = `
-          <option value="0">D0 — standard</option>
-          <option value="1">D1 — fast-cure</option>
-          <option value="2">D2 — slow-cure</option>
+          <option value="0">D0 — next free</option>
+          <option value="1">D1 — next same</option>
+          <option value="2">D2 — next opposite</option>
         `;
         // deterministic “pleasant” pattern
-        const val = (i%6===0 ? 2 : (i%6===1 ? 1 : 0));
+        const val = prior[i] ?? (i%6===0 ? 2 : (i%6===1 ? 1 : 0));
         sel.value = String(val);
         sel.dataset.idx = String(i);
         cell.appendChild(small);
@@ -955,143 +1057,7 @@
       compute();
     }
 
-    function computeAnalytics(){
-      const N = model.N;
-      const doping = model.doping.slice();
-
-      // Histogram of switch counts across ALL feasible direction sequences.
-      // DP over courses and last dir.
-      // dp[dir] is object: switches -> count
-      let dp = {
-        1: {0: 1},
-        [-1]: {0: 1}
-      };
-
-      for(let k=1; k<N; k++){
-        const dopingPrev = doping[k-1]; // course k (1-based) determines constraint to course k+1
-        const next = { 1: {}, [-1]: {} };
-
-        for(const dirPrev of [1, -1]){
-          const map = dp[dirPrev];
-          const allowed = allowedNextDirs(dirPrev, dopingPrev);
-
-          for(const dirNext of allowed){
-            for(const sStr in map){
-              const s = parseInt(sStr, 10);
-              const s2 = s + (dirNext !== dirPrev ? 1 : 0);
-              next[dirNext][s2] = (next[dirNext][s2] || 0) + map[sStr];
-            }
-          }
-        }
-        dp = next;
-      }
-
-      const hist = Array(N).fill(0); // switches 0..N-1
-      for(const dir of [1, -1]){
-        for(const sStr in dp[dir]){
-          const s = parseInt(sStr, 10);
-          if(s>=0 && s<hist.length) hist[s] += dp[dir][sStr];
-        }
-      }
-      const totalPlans = hist.reduce((a,b)=>a+b,0);
-
-      let minSw = null, maxSw = null, sumSw = 0;
-      for(let s=0; s<hist.length; s++){
-        if(hist[s] > 0 && minSw === null) minSw = s;
-        if(hist[s] > 0) maxSw = s;
-        sumSw += s * hist[s];
-      }
-      const meanSw = totalPlans ? (sumSw / totalPlans) : 0;
-
-      // Base time in steps (build + cures), excluding switch penalty.
-      const buildSteps = N * model.B;
-      let cureTotal = 0;
-      for(let k=0; k<N; k++){
-        if(!model.includeFinalCure && k === N-1) break;
-        cureTotal += cureStepsForCourse(doping[k]);
-      }
-      const baseSteps = buildSteps + cureTotal;
-
-      // Total time distribution: baseSteps + switchPenalty*s
-      const switchPenalty = model.switchPenalty;
-
-      // Best plan = one that achieves minSw (min total time).
-      const best = computeBestPlanMinSwitches();
-
-      // Choice points: initial dir + each D0 among courses 1..N-1
-      let choicePoints = 1;
-      for(let k=0; k<N-1; k++){
-        if(doping[k] === 0) choicePoints++;
-      }
-
-      return {
-        N, B: model.B,
-        doping,
-        totalPlans,
-        choicePoints,
-        histSwitches: hist,
-        minSwitches: minSw ?? 0,
-        maxSwitches: maxSw ?? 0,
-        meanSwitches: meanSw,
-        baseSteps,
-        buildSteps,
-        cureTotal,
-        switchPenalty,
-        bestPlan: best
-      };
-    }
-
-    function computeBestPlanMinSwitches(){
-      const N = model.N;
-      const doping = model.doping;
-
-      // dpMin[k][dirIdx] where dirIdx 0->-1, 1->+1
-      // store predecessor to reconstruct
-      const INF = 1e9;
-      const dpMin = Array.from({length:N}, ()=>[INF, INF]);
-      const prev = Array.from({length:N}, ()=>[null, null]); // {dirIdxPrev}
-
-      // course 1: either dir, 0 switches
-      dpMin[0][0] = 0; // -1
-      dpMin[0][1] = 0; // +1
-
-      for(let k=0; k<N-1; k++){
-        const dopingK = doping[k];
-        for(const dirPrev of [-1, 1]){
-          const dirPrevIdx = (dirPrev === -1 ? 0 : 1);
-          const cur = dpMin[k][dirPrevIdx];
-          if(cur >= INF) continue;
-
-          const allowed = allowedNextDirs(dirPrev, dopingK);
-          for(const dirNext of allowed){
-            const dirNextIdx = (dirNext === -1 ? 0 : 1);
-            const cost = cur + (dirNext !== dirPrev ? 1 : 0);
-            if(cost < dpMin[k+1][dirNextIdx]){
-              dpMin[k+1][dirNextIdx] = cost;
-              prev[k+1][dirNextIdx] = dirPrevIdx;
-            }
-          }
-        }
-      }
-
-      // choose best ending dir
-      let endIdx = dpMin[N-1][0] <= dpMin[N-1][1] ? 0 : 1;
-      let minSwitches = dpMin[N-1][endIdx];
-      if(minSwitches >= INF) { // shouldn't happen
-        endIdx = 1; minSwitches = 0;
-      }
-
-      const dirs = Array(N).fill(1);
-      let curIdx = endIdx;
-      for(let k=N-1; k>=0; k--){
-        dirs[k] = (curIdx === 0 ? -1 : 1);
-        const p = prev[k][curIdx];
-        if(p === null) break;
-        curIdx = p;
-      }
-
-      return { dirs, minSwitches };
-    }
+    function computeAnalytics(){ return ModelMath.analytics(model); }
 
     function renderStats(stats){
       const timeMin = stats.baseSteps + stats.switchPenalty * stats.minSwitches;
@@ -1100,10 +1066,11 @@
 
       el.stats.innerHTML = '';
       const items = [
-        {k:"Feasible plans", v: String(stats.totalPlans), s:`Choice points: ${stats.choicePoints}`},
-        {k:"Switches (min / mean / max)", v:`${stats.minSwitches} / ${fmt(stats.meanSwitches,2)} / ${stats.maxSwitches}`, s:`Penalty per switch: ${stats.switchPenalty} step(s)`},
+        {k:"Feasible plans", v: String(stats.totalPlans), s:stats.totalPlans ? `Binary choices under these rules: ${stats.choicePoints}` : "The chosen policy conflicts with the direction rule."},
+        {k:"Switches (min / mean / max)", v:stats.totalPlans ? `${stats.minSwitches} / ${fmt(stats.meanSwitches,2)} / ${stats.maxSwitches}` : "—", s:`Penalty per switch: ${stats.switchPenalty} step(s)`},
         {k:"Base time (build+cure)", v:`${stats.baseSteps} steps`, s:`Build: ${stats.buildSteps}, Cure: ${stats.cureTotal}`},
-        {k:"Total time (min / mean / max)", v:`${fmt(timeMin,1)} / ${fmt(timeMean,1)} / ${fmt(timeMax,1)}`, s:`Total = base + penalty×switches`}
+        {k:"Total time (min / mean / max)", v:stats.totalPlans ? `${fmt(timeMin,1)} / ${fmt(timeMean,1)} / ${fmt(timeMax,1)}` : "No feasible run", s:`Total = base + penalty×switches`},
+        {k:"Course-event projection",v:stats.totalPlans ? `${stats.courseEventBaseSteps + stats.switchPenalty*stats.minSwitches}–${stats.courseEventBaseSteps + stats.switchPenalty*stats.maxSwitches} events`:"No feasible run",s:"Each whole course counts once; cure/setup waits retain their units. This retimes the brick-level run."}
       ];
       for(const it of items){
         const div = document.createElement('div');
@@ -1124,7 +1091,7 @@
     }
 
     function updatePlanPreview(stats){
-      if(!stats || !stats.bestPlan) return;
+      if(!stats || !stats.bestPlan){ el.planPreview.textContent='No feasible direction plan. Change the policy or direction rule.'; return; }
       const {dirs, minSwitches} = stats.bestPlan;
       el.planPreview.textContent =
 `Best plan (min switches = ${minSwitches}):
@@ -1135,7 +1102,9 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
     }
 
     function compute(){
+      stopAnim();
       normalizeModelFromUI();
+      resetBuildView();
       latestStats = computeAnalytics();
       renderStats(latestStats);
       updatePlanPreview(latestStats);
@@ -1145,11 +1114,15 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
 
       resetLog("Computed analytics.");
       log(`N=${model.N}, B=${model.B}, offset=${model.offset}`);
-      log(`Doping: ${model.doping.map((d,i)=>`C${i+1}:D${d}`).join(' ')}`);
+      log(`Direction rule=${model.directionRule}, policy=${model.policy}; cure law=${model.cureLaw}`);
+      log(`D labels: ${model.doping.map((d,i)=>`C${i+1}:D${d}`).join(' ')}`);
+      if(model.cureLaw === "numeric") log(`Numeric doping=${JSON.stringify(model.numericDoping)}; beta=${model.beta}`);
+      log(`Cure steps per course=${latestStats.cureSteps.join(", ")} (last included: ${model.includeFinalCure})`);
       log(`Plans=${latestStats.totalPlans}, minSwitches=${latestStats.minSwitches}, meanSwitches=${fmt(latestStats.meanSwitches,2)}`);
 
       // show best plan in view (without building it)
-      view.planDirs = latestStats.bestPlan.dirs.slice();
+      view.planDirs = latestStats.bestPlan ? latestStats.bestPlan.dirs.slice() : null;
+      el.btnAnimBest.disabled = el.btnAnimRand.disabled = !latestStats.totalPlans;
       canvasCtrl.render();
       toast("Brick analytics updated.", 'info');
     }
@@ -1169,27 +1142,24 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
       anim.paused = false;
       anim.stepPhase = 'idle';
       anim.stepRemaining = 0;
+      anim._stepClock = null;
       if(anim.raf) cancelAnimationFrame(anim.raf);
       anim.raf = null;
       el.btnPause.textContent = "Pause";
     }
 
-    function makeRandomPlan(){
-      const N = model.N;
-      const doping = model.doping;
-      const dirs = Array(N).fill(1);
-      dirs[0] = Math.random() < 0.5 ? -1 : 1;
-      for(let k=0; k<N-1; k++){
-        const allowed = allowedNextDirs(dirs[k], doping[k]);
-        dirs[k+1] = allowed[Math.floor(Math.random() * allowed.length)];
-      }
-      return dirs;
-    }
+    function makeRandomPlan(){ return ModelMath.randomPlan(model); }
 
     function animatePlan(dirs, label){
+      if(!dirs || dirs.length!==model.N) throw new Error("No feasible plan to animate.");
       stopAnim();
       resetBuildView();
+      view.planDirs=dirs.slice();
       resetLog(`Animating: ${label}`);
+      log(`N=${model.N}, B=${model.B}, offset=${model.offset}; direction rule=${model.directionRule}, policy=${model.policy}`);
+      log(`D labels=${JSON.stringify(model.doping)}; cure law=${model.cureLaw}; base=${model.baseCure}, extra=${model.slowExtra}, beta=${model.beta}`);
+      if(model.cureLaw==='numeric') log(`Numeric doping=${JSON.stringify(model.numericDoping)}`);
+      log(`Setup penalty=${model.switchPenalty}; include final cure=${model.includeFinalCure}. Durations are model steps, not playback seconds.`);
       log(planToString(dirs));
 
       anim.plan = dirs.slice();
@@ -1255,14 +1225,14 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
                 view.overlay = {label: `Setup (switch dir)`, remainingSteps: anim.stepRemaining};
               } else {
                 anim.stepPhase = 'cure';
-                anim.stepRemaining = cureStepsForCourse(model.doping[k]);
+                anim.stepRemaining = cureStepsForCourse(k);
                 view.overlay = anim.stepRemaining>0 ? {label: `Curing (after course ${k+1})`, remainingSteps: anim.stepRemaining} : null;
               }
             } else {
               // last course
               if(model.includeFinalCure){
                 anim.stepPhase = 'cure';
-                anim.stepRemaining = cureStepsForCourse(model.doping[k]);
+                anim.stepRemaining = cureStepsForCourse(k);
                 view.overlay = anim.stepRemaining>0 ? {label: `Final cure`, remainingSteps: anim.stepRemaining} : null;
               } else {
                 anim.stepPhase = 'done';
@@ -1288,7 +1258,7 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
               // after setup go to cure of just finished course
               const k = anim.cursor.course;
               anim.stepPhase = 'cure';
-              anim.stepRemaining = cureStepsForCourse(model.doping[k]);
+              anim.stepRemaining = cureStepsForCourse(k);
               view.overlay = anim.stepRemaining>0 ? {label: `Curing (after course ${k+1})`, remainingSteps: anim.stepRemaining} : null;
               if(anim.stepRemaining>0) log(`Setup complete. Starting cure.`);
             }
@@ -1499,6 +1469,13 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
         return;
       }
 
+      if(!latestStats.totalPlans){
+        ctx.fillStyle='#991b1b';
+        ctx.font='13px system-ui, sans-serif';
+        ctx.fillText('No feasible plan under these rules.',10,Math.max(68,dims.h/2));
+        return;
+      }
+
       const hist = latestStats.histSwitches;
       const maxCount = Math.max(1, ...hist);
       const padL = 42, padR = 10, padT = 54, padB = 28;
@@ -1566,7 +1543,9 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
           slowExtra: model.slowExtra,
           switchPenalty: model.switchPenalty,
           includeFinalCure: model.includeFinalCure,
-          doping: model.doping.slice()
+          doping: model.doping.slice(),
+          directionRule:model.directionRule,policy:model.policy,cureLaw:model.cureLaw,
+          beta:model.beta,numericDoping:model.numericDoping.slice()
         },
         analytics: latestStats ? {
           totalPlans: latestStats.totalPlans,
@@ -1576,64 +1555,68 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
           meanSwitches: latestStats.meanSwitches,
           maxSwitches: latestStats.maxSwitches,
           baseSteps: latestStats.baseSteps,
+          courseEventBaseSteps: latestStats.courseEventBaseSteps,
           buildSteps: latestStats.buildSteps,
-          cureTotal: latestStats.cureTotal
+          cureTotal: latestStats.cureTotal,
+          cureSteps: latestStats.cureSteps.slice()
         } : null,
         bestPlan: latestStats ? latestStats.bestPlan : null
       };
       return payload;
     }
 
-    function init(){
-      normalizeModelFromUI();
-      resetBuildView();
-
-      el.btnRandom.onclick = randomizeDoping;
-      el.btnCompute.onclick = compute;
-      el.btnAnimBest.onclick = ()=>{
-        normalizeModelFromUI();
-        if(!latestStats) compute();
-        const dirs = latestStats.bestPlan.dirs.slice();
-        view.planDirs = dirs.slice();
-        animatePlan(dirs, "best plan");
-      };
-      el.btnAnimRand.onclick = ()=>{
-        normalizeModelFromUI();
-        const dirs = makeRandomPlan();
-        view.planDirs = dirs.slice();
-        animatePlan(dirs, "random plan");
-      };
-      el.btnPause.onclick = togglePause;
-      el.btnReset.onclick = resetAll;
-
-      // Recompute on input changes (debounced)
-      let t = null;
-      function onChange(){
-        clearTimeout(t);
-        t = setTimeout(()=>{
-          try{
-            stopAnim();
-            normalizeModelFromUI();
-            resetBuildView();
-            compute();
-          }catch(e){
-            console.error(e);
-            toast("Brick update failed.", 'err', e.message || String(e));
-          }
-        }, 120);
+    function syncOptions(){
+      const numeric=el.cureLaw.value==='numeric';
+      document.getElementById('brickBetaLabel').hidden=!numeric;
+      document.getElementById('brickNumericLabel').hidden=!numeric;
+    }
+    function legacy(which){
+      stopAnim();
+      el.offset.value='0';el.switchPenalty.value='0';el.includeFinalCure.checked=false;
+      el.directionRule.value=which===1 ? 'doping':'free';
+      el.policy.value=which===1 ? 'any':'cw';
+      el.cureLaw.value=which===1 ? 'categorical':'numeric';
+      if(which===2){
+        const N=readNumber(el.N,'Courses',1,40,true);
+        el.numericDoping.value=JSON.stringify(Array.from({length:N},(_,i)=>i%3));
+        el.beta.value='1';
       }
-      [el.N, el.B, el.offset, el.switchPenalty, el.baseCure, el.slowExtra, el.includeFinalCure].forEach(inp=>{
-        inp.addEventListener('change', onChange);
+      syncOptions();compute();
+    }
+    function init(){
+      // Render only once all model/view state has been initialised, inside the boot try/catch.
+      canvasCtrl=attachCanvas(document.getElementById('brickCanvas'),renderBrick);
+      histCtrl=attachCanvas(document.getElementById('brickHist'),renderHist);
+      el.btnRandom.onclick=guarded(randomizeDoping,el.error);
+      el.btnCompute.onclick=guarded(compute,el.error);
+      el.btnAnimBest.onclick=guarded(()=>{
+        compute();
+        if(!latestStats.bestPlan) throw new Error("No feasible plan under this policy and direction rule.");
+        animatePlan(latestStats.bestPlan.dirs,"best plan");
+      },el.error);
+      el.btnAnimRand.onclick=guarded(()=>{
+        compute();animatePlan(makeRandomPlan(),"random feasible plan");
+      },el.error);
+      el.btnPause.onclick=togglePause;
+      el.btnReset.onclick=guarded(resetAll,el.error);
+      el.legacy1.onclick=guarded(()=>legacy(1),el.error);
+      el.legacy2.onclick=guarded(()=>legacy(2),el.error);
+      const controls=[el.N,el.B,el.offset,el.switchPenalty,el.baseCure,el.slowExtra,el.includeFinalCure,el.directionRule,el.policy,el.cureLaw,el.beta,el.numericDoping,el.dopingGrid];
+      controls.forEach(inp=>{
+        inp.addEventListener('input',()=>{
+          stopAnim();latestStats=null;view.planDirs=null;resetBuildView();
+          el.btnAnimBest.disabled=el.btnAnimRand.disabled=true;
+          el.stats.textContent="Inputs changed. Compute again or leave the field to apply.";
+          el.planPreview.textContent="Not computed for these inputs.";
+          showError(el.error,null);syncOptions();
+        });
+        inp.addEventListener('change',guarded(()=>{syncOptions();compute();},el.error));
       });
-      el.dopingGrid.addEventListener('change', onChange);
-
-      // Initial compute
-      compute();
-
-      return { exportJSON };
+      syncOptions();compute();
+      return {exportJSON:()=>{normalizeModelFromUI();if(!latestStats) compute();return exportJSON();},exportLog:()=>el.log.textContent};
     }
 
-    return { init, exportJSON: ()=>exportJSON() };
+    return {init};
   })();
 
   // ==========================
@@ -1656,11 +1639,12 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
       stats: document.getElementById('circleStats'),
       tableBody: document.getElementById('circleTableBody'),
       log: document.getElementById('circleLog'),
-      exportCircle: document.getElementById('exportCircle')
+      exportCircle: document.getElementById('exportCircle'),
+      error: document.getElementById('circleValidation'),
+      crossings: document.getElementById('circleCrossings')
     };
 
-    const canvasCtrl = attachCanvas(document.getElementById('circleCanvas'), renderCircle);
-    const timelineCtrl = attachCanvas(document.getElementById('circleTimeline'), renderTimeline);
+    let canvasCtrl, timelineCtrl;
 
     const model = {
       r: 200,
@@ -1676,7 +1660,9 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
       tNow: 0,
       running: false,
       paused: false,
-      lastTs: 0
+      lastTs: 0,
+      raf:null,
+      dirty:true
     };
 
     function resetLog(prefix=""){
@@ -1699,13 +1685,17 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
     }
 
     function computeWindows(){
-      // Normalize from UI
-      model.r = clamp(parseFloat(el.r.value || '200'), 20, 500);
-      model.theta0 = parseFloat(el.theta0.value || '0');
-      model.omega = parseFloat(el.omega.value || '0');
-      model.phi = parseFloat(el.phi.value || '0');
-      model.delta = clamp(parseFloat(el.delta.value || '20'), 1, 180);
-      model.T = clamp(parseFloat(el.T.value || '8'), 0.1, 300);
+      stopAnim();
+      const candidate={
+        r:readNumber(el.r,"Radius",20,500),
+        theta0:readNumber(el.theta0,"Initial angle",-9999,9999),
+        omega:readNumber(el.omega,"Angular speed",-2000,2000),
+        phi:readNumber(el.phi,"Slot centre",-9999,9999),
+        delta:readNumber(el.delta,"Slot half-width",1,180),
+        T:readNumber(el.T,"Duration",0.1,300)
+      };
+      Object.assign(model,candidate);
+      showError(el.error,null);
 
       const theta0 = model.theta0;
       const omega = model.omega;
@@ -1715,7 +1705,7 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
 
       const windows = [];
 
-      if(Math.abs(omega) < 1e-12){
+      if(omega === 0){
         // stationary
         const th = normalizeAngleDeg(theta0);
         if(inSlot(th)){
@@ -1773,6 +1763,9 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
 
       view.windows = windows;
       view.tNow = 0;
+      view.dirty=false;
+      const future=ModelMath.crossings(model);
+      el.crossings.textContent=future.reason || `Entries: ${future.entries.map(t=>fmt(t,3)).join(", ")} s\nExits: ${future.exits.map(t=>fmt(t,3)).join(", ")} s`;
 
       // render output
       renderTableAndStats();
@@ -1795,7 +1788,7 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
 
       el.stats.innerHTML = '';
       const items = [
-        {k:"# visibility windows", v:String(view.windows.length), s:"How many times the object is observable"},
+        {k:"# visibility windows", v:String(view.windows.length), s:"Connected visible intervals within the chosen horizon"},
         {k:"Visible time", v:`${fmt(visibleDur,3)} s`, s:`Fraction of horizon: ${fmt(100*frac,1)}%`},
         {k:"Period (if ω≠0)", v: (Math.abs(model.omega)>1e-12 ? `${fmt(360/Math.abs(model.omega),3)} s` : "—"), s:"360° / |ω|"},
         {k:"Output rule", v:"θ or ⊥", s:"⊥ during blackout"}
@@ -1818,8 +1811,8 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${idx+1}</td>
-          <td>${fmt(tIn,3)}</td>
-          <td>${fmt(tOut,3)}</td>
+          <td>${fmt(tIn,3)}${tIn===0 ? " (horizon start)" : ""}</td>
+          <td>${fmt(tOut,3)}${tOut===T ? " (horizon end)" : ""}</td>
           <td>${fmt(dur,3)}</td>
           <td>${fmt(thIn,1)}°</td>
           <td>${fmt(thOut,1)}°</td>
@@ -1960,6 +1953,8 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
     function stopAnim(){
       view.running = false;
       view.paused = false;
+      if(view.raf!==null) cancelAnimationFrame(view.raf);
+      view.raf=null;
       el.btnPause.textContent = 'Pause';
     }
 
@@ -1971,9 +1966,7 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
     }
 
     function animate(){
-      if(view.windows.length === 0){
-        computeWindows();
-      }
+      if(view.dirty) computeWindows();
       stopAnim();
       view.running = true;
       view.paused = false;
@@ -1987,7 +1980,7 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
         if(!view.running) return;
         if(view.paused){
           view.lastTs = ts;
-          requestAnimationFrame(tick);
+          view.raf=requestAnimationFrame(tick);
           return;
         }
         const dt = (ts - view.lastTs) / 1000; // seconds
@@ -2014,9 +2007,9 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
 
         canvasCtrl.render();
         timelineCtrl.render();
-        requestAnimationFrame(tick);
+        view.raf=requestAnimationFrame(tick);
       }
-      requestAnimationFrame(tick);
+      view.raf=requestAnimationFrame(tick);
     }
 
     function reset(){
@@ -2031,46 +2024,39 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
     function exportJSON(){
       const payload = {
         model: {...model},
+        crossingsAfterZero:ModelMath.crossings(model),
         windows: view.windows.map(w=>({
           tIn: w.tIn,
           tOut: w.tOut,
           thetaIn: normalizeAngleDeg(model.theta0 + model.omega*w.tIn),
           thetaOut: normalizeAngleDeg(model.theta0 + model.omega*w.tOut),
-          duration: (w.tOut - w.tIn)
+          duration: (w.tOut - w.tIn),
+          startIsHorizon:w.tIn===0,endIsHorizon:w.tOut===model.T
         }))
       };
       return payload;
     }
 
     function init(){
-      el.btnCompute.onclick = ()=>{ computeWindows(); };
-      el.btnAnim.onclick = ()=>{ animate(); };
-      el.btnPause.onclick = ()=>{ togglePause(); };
-      el.btnReset.onclick = ()=>{ reset(); };
-
-      // Debounce recompute on change
-      let t = null;
-      function onChange(){
-        clearTimeout(t);
-        t = setTimeout(()=>{
-          try{
-            stopAnim();
-            computeWindows();
-          }catch(e){
-            console.error(e);
-            toast("Circle update failed.", 'err', e.message || String(e));
-          }
-        }, 120);
-      }
-      [el.r, el.theta0, el.omega, el.phi, el.delta, el.T].forEach(inp=>{
-        inp.addEventListener('change', onChange);
+      canvasCtrl=attachCanvas(document.getElementById('circleCanvas'),renderCircle);
+      timelineCtrl=attachCanvas(document.getElementById('circleTimeline'),renderTimeline);
+      el.btnCompute.onclick=guarded(computeWindows,el.error);
+      el.btnAnim.onclick=guarded(animate,el.error);
+      el.btnPause.onclick=togglePause;
+      el.btnReset.onclick=reset;
+      [el.r,el.theta0,el.omega,el.phi,el.delta,el.T].forEach(inp=>{
+        inp.addEventListener('input',()=>{
+          stopAnim();view.dirty=true;
+          el.stats.textContent="Inputs changed. Compute windows again or leave the field to apply.";
+          el.tableBody.innerHTML='';el.crossings.textContent='';
+          showError(el.error,null);
+        });
+        inp.addEventListener('change',guarded(computeWindows,el.error));
       });
-
       computeWindows();
-      return { exportJSON };
+      return {exportJSON:()=>{if(view.dirty)computeWindows();return exportJSON();},exportLog:()=>el.log.textContent};
     }
-
-    return { init, exportJSON: ()=>exportJSON() };
+    return {init};
   })();
 
   // ==========================
@@ -2099,8 +2085,16 @@ Legend: ↻ = clockwise, ↺ = counter-clockwise`;
     const brickAPI = Brick.init();
     const circleAPI = Circle.init();
 
-    btnExportBrick.onclick = ()=> setExport(brickAPI.exportJSON());
-    btnExportCircle.onclick = ()=> setExport(circleAPI.exportJSON());
+    btnExportBrick.onclick = guarded(()=>setExport(brickAPI.exportJSON()),document.getElementById("brickValidation"));
+    btnExportCircle.onclick = guarded(()=>setExport(circleAPI.exportJSON()),document.getElementById("circleValidation"));
+    function downloadLog(name,text){
+      const url=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));
+      const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      toast("Event log downloaded locally.", "info", name);
+    }
+    document.getElementById("exportBrickLog").onclick=()=>downloadLog("brick-event-log.txt",brickAPI.exportLog());
+    document.getElementById("exportCircleLog").onclick=()=>downloadLog("observer-log.txt",circleAPI.exportLog());
     btnClearExport.onclick = ()=>{ exportBox.value=''; toast("Cleared.", 'info'); };
 
     // Success smoke marker

@@ -11,6 +11,7 @@
     --ok:#2e7d32; --warn:#b45309; --bad:#b42318;
     --cw:#c2410c; --ccw:#1d4ed8; --inprog:#7c3aed;
   }
+  *{box-sizing:border-box} .grid>*{min-width:0} input,select{max-width:100%} .mono{overflow-wrap:anywhere}
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
   .min-h-64{min-height:16rem}
@@ -91,7 +92,7 @@
   .tiny{font-size:.83rem; color:var(--muted)}
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
   .timeline{
-    display:grid; grid-auto-flow:column; grid-auto-columns: minmax(.6rem, 1fr);
+    display:grid; grid-auto-flow:column; grid-auto-columns: minmax(0, 1fr);
     gap:.18rem; align-items:stretch;
     border:1px solid var(--border); border-radius:.6rem; padding:.35rem;
     background:#fff;
@@ -146,7 +147,7 @@
   <noscript>Interactive visualisation</noscript>
 
   <header class="wrap">
-    <a class="back-link" href="index.html" aria-label="Back to Apps Index">← Back to Apps Index</a>
+    <a class="back-link" href="../index.html" aria-label="Back to Apps Index">← Back to Apps Index</a>
     <h1>Dynamic Project States — Brick Cylinder (Toy Model)</h1>
     <div class="subtle">
       A course-by-course build where each course can be laid <span class="pill"><span class="dot cw"></span>cw</span> or
@@ -227,7 +228,7 @@
         </div>
 
         <div class="tiny" style="margin-top:.35rem">
-          “Policy” is the discrete analogue of a <em>vector field</em>: it selects one of the two available directions at each course start.
+          A deterministic policy selects a direction at each course start. Random mode instead samples a direction using the displayed probability.
         </div>
       </div>
 
@@ -243,7 +244,7 @@
 
       <div class="card">
         <h2>Trajectory</h2>
-        <div class="subtle">Top: blueprint progress bar. Bottom: tree of possible course-direction trajectories (depth-limited).</div>
+        <div class="subtle">Top: blueprint progress bar. Bottom: all unrestricted course-direction histories (depth-limited), not a count conditioned on the selected policy or current prefix.</div>
 
         <div style="margin-top:.55rem">
           <div class="timeline" id="timeline"></div>
@@ -302,7 +303,7 @@
           <div class="checkmark">✓</div>
           <div>
             <div><strong>Ways:</strong> tangent-bundle intuition</div>
-            <div class="tiny">At each course start, the “tangent fibre” is the discrete choice set {cw, ccw}; a policy selects a direction (vector field).</div>
+            <div class="tiny">At each course start, the “tangent fibre” is the discrete choice set {cw, ccw}; a deterministic policy selects a direction. The fibre is a set, not a tangent vector space.</div>
           </div>
         </div>
 
@@ -325,7 +326,7 @@
         <div class="checkitem">
           <div class="warnmark checkmark">!</div>
           <div>
-            <div><strong>Not yet (deliberate):</strong> sheaves/lenses composition across multiple subprojects</div>
+            <div><strong>Not yet (deliberate):</strong> lens composition across multiple subprojects</div>
             <div class="tiny">This toy isolates one “subsystem” (course placement). Next step is to add a second subsystem and compose via a wiring diagram.</div>
           </div>
         </div>
@@ -334,7 +335,7 @@
           <div class="warnmark checkmark">!</div>
           <div>
             <div><strong>Not yet (next extension):</strong> curing/doping constraints as extra state dimensions</div>
-            <div class="tiny">We added a pause-between-courses control (a simple temporal constraint). Full “cooldown states” + doping rules are next.</div>
+            <div class="tiny">The pause is a presentation control, not a physical curing law. Use essay8 for curing rules or essay13 for timer-state and resource dynamics.</div>
           </div>
         </div>
       </div>
@@ -353,13 +354,13 @@
       </p>
       <p class="subtle">
         This is the “course-by-course” system. The animation tracks additional micro-state (brick index, pause timer)
-        purely for rendering smoothness.
+        for the replay. The macro model commits a whole course per step; its pause is presentation time, not physical curing. The trajectory prefix is also stored to show history; (n,dir) alone does not reconstruct it.
       </p>
 
       <h3 style="margin-top:.75rem">Tangent-bundle intuition (discrete)</h3>
       <p class="subtle">
         At each course-start state, the “tangent fibre” is the set of allowable next directions. In this base toy it’s always {cw, ccw}.
-        A <em>policy</em> (manual / always cw / alternate / random) is a section that picks one direction at each step.
+        A deterministic <em>policy</em> such as always-cw or alternate is a section selecting a direction. Manual mode supplies choices as you go. Random mode is a stochastic rule; its sampled run is a trajectory, not a deterministic section defined on all states.
       </p>
 
       <h3 style="margin-top:.75rem">Lens / open-system packaging (informal)</h3>
@@ -641,7 +642,7 @@ Layer 1  [■■■■■■■■■■■■■■■■■■■■■■■�
         ctx.font = `${Math.max(12, Math.round(13*DPR))}px ui-monospace, monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`curing pause: ${Math.ceil(sim.pauseLeftMs/100)/10}s`, W/2, H/2);
+        ctx.fillText(`display pause: ${Math.ceil(sim.pauseLeftMs/100)/10}s`, W/2, H/2);
         ctx.restore();
       }
     }
@@ -701,7 +702,7 @@ Layer 1  [■■■■■■■■■■■■■■■■■■■■■■■�
       }else if(sim.currentDir !== null){
         manualHint.textContent = `Course in progress: direction locked to ${sim.currentDir}.`;
       }else if(sim.pauseLeftMs>0){
-        manualHint.textContent = 'Waiting between courses (pause/cure).';
+        manualHint.textContent = 'Waiting between courses (display pause).';
       }else{
         manualHint.textContent = '—';
       }
@@ -800,8 +801,8 @@ Layer 1  [■■■■■■■■■■■■■■■■■■■■■■■�
         ['Micro state (brick)', `${sim.brickInCourse}/${cfg.bricksPer}`],
         ['Phase', courseState],
         ['Bricks remaining', fmtInt(Math.max(0,remaining))],
-        ['Possible full trajectories', possible],
-        ['Policy (= vector field)', cfg.policy + (cfg.policy==='random' ? ` (p(cw)=${cfg.pCw.toFixed(2)})` : '')]
+        ['All unrestricted direction histories', possible],
+        ['Policy / choice rule', cfg.policy + (cfg.policy==='random' ? ` (p(cw)=${cfg.pCw.toFixed(2)})` : '')]
       ];
 
       analyticsKv.innerHTML = '';
@@ -826,7 +827,7 @@ Layer 1  [■■■■■■■■■■■■■■■■■■■■■■■�
       if(sim.courseDone >= cfg.layers){
         setPhase('complete');
       }else if(sim.pauseLeftMs > 0){
-        setPhase('curing pause');
+        setPhase('display pause');
       }else if(sim.currentDir){
         setPhase(`building (${sim.currentDir})`);
       }else{
@@ -994,7 +995,7 @@ Layer 1  [■■■■■■■■■■■■■■■■■■■■■■■�
         return;
       }
       if(sim.pauseLeftMs > 0){
-        toast('Currently in pause/cure. Wait until it ends or step.');
+        toast('Currently in a display pause. Wait until it ends or step.');
         return;
       }
       if(sim.courseDone >= cfg.layers){

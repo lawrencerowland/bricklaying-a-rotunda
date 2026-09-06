@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bricklaying Trajectories on a Cylinder — Interactive</title>
+  <title>Bricklaying Orders — Spatial Trace Comparison</title>
 
   <style>
     :root{
@@ -19,6 +19,9 @@
       --radius:14px;
     }
     *{box-sizing:border-box}
+    :focus-visible{outline:3px solid #b45309;outline-offset:3px}
+    a{color:#1e3a8a}
+    p{line-height:1.5}
     html,body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
     header{
       background:linear-gradient(90deg, #0f172a, var(--blue));
@@ -31,11 +34,12 @@
     main{max-width:1100px;margin:0 auto;padding:1rem}
     .grid{
       display:grid;
+      align-items:start;
       gap:1rem;
       grid-template-columns: 1fr;
     }
     @media (min-width: 900px){
-      .grid{grid-template-columns: 1.2fr .8fr;}
+      .grid{grid-template-columns: minmax(0,1.2fr) minmax(0,.8fr);}
     }
     .card{
       background:var(--card);
@@ -44,6 +48,7 @@
       box-shadow:var(--shadow);
       padding:1rem;
       overflow:hidden;
+      min-width:0;
     }
     .card h2{margin:.2rem 0 .75rem;font-size:1.05rem}
     .muted{color:var(--muted)}
@@ -58,6 +63,7 @@
     }
     label{font-size:.92rem;color:var(--muted)}
     select{
+      max-width:100%;
       font-size:1rem;
       padding:.45rem .55rem;
       border:1px solid var(--line);
@@ -103,7 +109,7 @@
     /* Small multiples */
     .smGrid{
       display:grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
       gap:.75rem;
       margin-top:.9rem;
     }
@@ -115,6 +121,8 @@
     }
     .smHead{
       display:flex;
+      flex-wrap:wrap;
+      min-height:3.5rem;
       justify-content:space-between;
       align-items:center;
       padding:.5rem .6rem;
@@ -126,6 +134,15 @@
     }
     .smHead strong{color:var(--ink);font-weight:650}
     .smViz{height:22vh; min-height:10rem}
+    @media (max-width:560px){
+      .smGrid{grid-template-columns:minmax(0,1fr)}
+      .smViz{height:17rem}
+      main{padding:.75rem}
+      .card{padding:.75rem}
+    }
+    .trace-summary{font-size:.9rem;min-height:3em}
+    .legendDot.legendStart{background:#15803d}
+    .legendArrow{color:#b45309;font-weight:800}
     .legendDot{
       display:inline-block;width:.65rem;height:.65rem;border-radius:50%;
       background:var(--red); vertical-align:-1px; margin-right:.3rem;
@@ -179,25 +196,25 @@
 
 <body>
 <header>
-  <h1>Bricklaying trajectories as global sections (discrete cylinder)</h1>
+  <h1>Same cylinder, different bricklaying orders</h1>
   <p class="muted" style="color:rgba(255,255,255,.86)">
-    State space is <code>X = L × S¹</code> (courses × angles); each policy is a section selecting a direction/offset field per course, yielding a discrete integral curve.
+    Compare ordered brick positions, course by course. Direction changes the trace; staggering also changes the brick layout.
   </p>
 </header>
 
 <main>
-  <p><a href="index.html">← Back to apps index</a></p>
+  <p><a href="index.html">← All dynamic-state essays</a></p>
   <div id="app" class="grid">
     <section class="card">
       <h2>Main view</h2>
 
       <div class="controls">
-        <label for="mode">Trajectory</label>
-        <select id="mode" aria-label="Select trajectory">
+        <label for="mode">Laying order</label>
+        <select id="mode" aria-label="Select laying order">
           <option value="clockwise">1. Clockwise</option>
           <option value="alternating">2. Alternating</option>
           <option value="staggered">3. Staggered (half-brick offset)</option>
-          <option value="spiral">4. Spiral</option>
+          <option value="anticlockwise">4. Anticlockwise</option>
         </select>
 
         <label for="levels" style="margin-left:.25rem">Levels</label>
@@ -212,54 +229,58 @@
       </div>
 
       <div class="vizWrap mainViz min-h-64" data-timeout="3000" id="vizContainer">
-        <canvas id="mainCanvas" aria-label="Main trajectory canvas"></canvas>
+        <canvas id="mainCanvas" role="img" aria-label="Ordered brick positions" aria-describedby="traceSummary">Ordered brick positions; the selected pattern is described below.</canvas>
         <noscript>Interactive visualisation</noscript>
       </div>
 
-      <div class="btnRow" role="group" aria-label="Quick select trajectory">
+      <p id="traceSummary" class="trace-summary muted" aria-live="polite"></p>
+      <div class="btnRow" role="group" aria-label="Quick select laying order">
         <button class="pill" data-set="clockwise" aria-pressed="true">Clockwise</button>
         <button class="pill" data-set="alternating" aria-pressed="false">Alternating</button>
         <button class="pill" data-set="staggered" aria-pressed="false">Staggered</button>
-        <button class="pill" data-set="spiral" aria-pressed="false">Spiral</button>
+        <button class="pill" data-set="anticlockwise" aria-pressed="false">Anticlockwise</button>
       </div>
 
       <div class="tests" id="tests">
         <div class="testRow">
           <span class="badge" id="statusBadge">boot: pending</span>
           <span class="badge" id="smokeBadge">smoke: pending</span>
-          <span class="badge" id="mathBadge">math: pending</span>
+          <span class="badge" id="mathBadge">trace checks: pending</span>
           <span class="badge" id="renderBadge">render: pending</span>
         </div>
         <div style="margin-top:.5rem">
-          <span class="legendLine"></span><span class="muted">path</span>
+          <span class="legendLine"></span><span class="muted">placement order</span>
           &nbsp;&nbsp;&nbsp;
           <span class="legendDot"></span><span class="muted">brick positions</span>
+          &nbsp; <span class="legendDot legendStart"></span>first brick
+          &nbsp; <span class="legendArrow">➜</span>sampled directions
         </div>
+        <p class="muted">Checks cover trace length, placement order and layout—not structural safety or construction feasibility.</p>
       </div>
     </section>
 
     <aside class="card">
       <h2>Small multiples</h2>
       <p class="muted" style="margin-top:-.25rem">
-        Four canonical policies as a 2×2 panel (useful as a “typical trajectories” snapshot).
+        Four order/layout patterns, shown together. Each uses the same number of courses and bricks.
       </p>
 
       <div class="smGrid" id="smGrid">
         <div class="smCard">
-          <div class="smHead"><strong>Clockwise</strong><span class="muted">v = +∂θ</span></div>
-          <div class="vizWrap smViz min-h-64"><canvas id="sm_clockwise"></canvas></div>
+          <div class="smHead"><strong>Clockwise</strong><span class="muted">↻ every course</span></div>
+          <div class="vizWrap smViz min-h-64"><canvas id="sm_clockwise" role="img" aria-label="Clockwise order on every course"></canvas></div>
         </div>
         <div class="smCard">
-          <div class="smHead"><strong>Alternating</strong><span class="muted">vℓ = (−1)^ℓ</span></div>
-          <div class="vizWrap smViz min-h-64"><canvas id="sm_alternating"></canvas></div>
+          <div class="smHead"><strong>Alternating</strong><span class="muted">↻ then ↺</span></div>
+          <div class="vizWrap smViz min-h-64"><canvas id="sm_alternating" role="img" aria-label="Alternating clockwise and anticlockwise courses"></canvas></div>
         </div>
         <div class="smCard">
-          <div class="smHead"><strong>Staggered</strong><span class="muted">Δθ = π/N on odd ℓ</span></div>
-          <div class="vizWrap smViz min-h-64"><canvas id="sm_staggered"></canvas></div>
+          <div class="smHead"><strong>Staggered</strong><span class="muted">half-brick shift</span></div>
+          <div class="vizWrap smViz min-h-64"><canvas id="sm_staggered" role="img" aria-label="Alternating courses with a half-brick shift on every second course"></canvas></div>
         </div>
         <div class="smCard">
-          <div class="smHead"><strong>Spiral</strong><span class="muted">helical lift</span></div>
-          <div class="vizWrap smViz min-h-64"><canvas id="sm_spiral"></canvas></div>
+          <div class="smHead"><strong>Anticlockwise</strong><span class="muted">↺ every course</span></div>
+          <div class="vizWrap smViz min-h-64"><canvas id="sm_anticlockwise" role="img" aria-label="Anticlockwise order on every course"></canvas></div>
         </div>
       </div>
 
@@ -267,15 +288,18 @@
 
       <h2>What you’re seeing</h2>
       <p class="muted">
-        We discretise <code>S¹</code> into <em>N</em> brick positions and <code>L</code> into courses. A “vector field”
-        is just a per-course choice of direction and phase (offset), i.e. a section of the discrete tangent bundle.
-        Each policy generates a discrete integral curve by stepping through angles and lifting course-by-course.
+        The inner ring is the first course; later courses are drawn farther out so you can compare them.
+        This is a radial diagram, not a widening wall. Lines connect consecutive placements, not the builder’s travel route.
+        The green dot marks the first brick; amber arrows show the direction on sampled courses.
       </p>
 
       <p class="muted">
-        If you want to push this toward Myers/Spivak “open systems”: treat the policy choice as an input bundle over an output (orientation),
-        and the brickwork state as the internal state; wiring diagrams then compose these “builders” exactly the way lenses compose.  
+        Clockwise, anticlockwise and alternating use one fixed brick layout. Staggered also shifts every second
+        course by half a brick, so it compares a different layout—not merely another order on identical positions.
       </p>
+      <p class="muted">This is a spatial-order comparison, not a complete project-state model. It does not model curing,
+        shared resources, structural support, time or reachable completion schedules. Settings and selections are temporary;
+        reloading restores the defaults. No project record or file is saved.</p>
     </aside>
   </div>
 </main>
@@ -302,7 +326,7 @@
     clockwise: document.getElementById('sm_clockwise'),
     alternating: document.getElementById('sm_alternating'),
     staggered: document.getElementById('sm_staggered'),
-    spiral: document.getElementById('sm_spiral')
+    anticlockwise: document.getElementById('sm_anticlockwise')
   };
 
   // ---------- tiny utilities ----------
@@ -353,12 +377,12 @@
       }
       return path;
     }
-    if(policy === 'spiral'){
-      // helical: keep turning while lifting course index discretely each N steps (still “per course”).
-      const total = L*N;
-      for(let k=0;k<total;k++){
-        const l = Math.floor(k / N);
-        path.push({level:l, angle:(k*dTheta)%(2*Math.PI)});
+    if(policy === 'anticlockwise'){
+      // Same labelled positions and start as clockwise, traversed in reverse.
+      for(let l=0;l<L;l++){
+        for(let i=0;i<N;i++){
+          path.push({level:l, angle:((N-i)%N)*dTheta});
+        }
       }
       return path;
     }
@@ -368,10 +392,9 @@
 
   // ---------- renderer ----------
   function fitCanvasToElement(canvas, wrapper){
-    const rect = wrapper.getBoundingClientRect();
-    // handle tiny/zero sizes robustly (e.g., during early layout)
-    const w = Math.max(1, Math.floor(rect.width));
-    const h = Math.max(1, Math.floor(rect.height));
+    // Use the inner box: the wrapper border must not enlarge its canvas.
+    const w = Math.max(1, wrapper.clientWidth);
+    const h = Math.max(1, wrapper.clientHeight);
     // device pixel ratio for crispness
     const dpr = clamp(window.devicePixelRatio || 1, 1, 3);
     canvas.width = Math.floor(w * dpr);
@@ -379,6 +402,7 @@
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
     const ctx = canvas.getContext('2d');
+    if(!ctx) throw new Error('Canvas 2D context unavailable');
     ctx.setTransform(dpr,0,0,dpr,0,0);
     return {ctx, w, h};
   }
@@ -395,11 +419,13 @@
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0,0,w,h);
 
-    // geometry
+    // Reserve a caption band and fit every course inside the canvas.
+    const captionBand = 28, margin = 14;
     const cx = w/2;
-    const cy = h/2;
-    const radius0 = Math.min(w,h) * 0.16;
-    const radiusStep = Math.min(16, Math.max(7, Math.min(w,h) * 0.03));
+    const cy = (h+captionBand)/2;
+    const outerRadius = Math.max(1, Math.min(w/2-margin, (h-captionBand)/2-margin));
+    const radius0 = outerRadius*.24;
+    const radiusStep = L>1 ? (outerRadius-radius0)/(L-1) : 0;
 
     function pt(level, angle){
       const r = radius0 + level*radiusStep;
@@ -434,7 +460,7 @@
     // points
     ctx.save();
     ctx.fillStyle = 'rgba(220,38,38,.92)';
-    const dot = Math.max(2, Math.min(3.2, Math.min(w,h)*0.007));
+    const dot = Math.max(.8, Math.min(2.5, radiusStep*.26));
     for(let i=0;i<path.length;i++){
       const p = pt(path[i].level, path[i].angle);
       ctx.beginPath();
@@ -443,14 +469,33 @@
     }
     ctx.restore();
 
+    // Three course-direction cues remain legible even with eighteen rings.
+    const sampledCourses = [...new Set([0,Math.floor((L-1)/2),L-1])];
+    for(const level of sampledCourses){
+      const index = level*N+Math.floor(N*.3);
+      const a = pt(path[index].level,path[index].angle);
+      const b = pt(path[index+1].level,path[index+1].angle);
+      const angle = Math.atan2(b.y-a.y,b.x-a.x);
+      const tip = {x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      const size = Math.min(6,Math.max(3,outerRadius*.045));
+      ctx.save();
+      ctx.translate(tip.x,tip.y);ctx.rotate(angle);
+      ctx.beginPath();ctx.moveTo(size,0);ctx.lineTo(-size,-size*.65);ctx.lineTo(-size,size*.65);ctx.closePath();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.stroke();
+      ctx.fillStyle='#b45309';ctx.fill();ctx.restore();
+    }
+    const first = pt(path[0].level,path[0].angle);
+    ctx.save();ctx.beginPath();ctx.arc(first.x,first.y,4,0,2*Math.PI);
+    ctx.fillStyle='#15803d';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+
     // caption in corner
     ctx.save();
     ctx.fillStyle = 'rgba(17,24,39,.7)';
     ctx.font = '12px system-ui, sans-serif';
-    ctx.fillText(`${policy}  (L=${L}, N=${N})`, 10, 18);
+    ctx.fillText(`${L} courses · ${N} bricks each`, 10, 18);
     ctx.restore();
 
-    return {w,h,path};
+    return {w,h,path,cx,cy,outerRadius};
   }
 
   // ---------- tests ----------
@@ -459,7 +504,7 @@
     const N = safeInt(bricksSel.value, 20);
 
     // Test 1: path length is L*N for all policies
-    const pols = ['clockwise','alternating','staggered','spiral'];
+    const pols = ['clockwise','alternating','staggered','anticlockwise'];
     const lenOk = pols.every(p => generatePath(p,L,N).length === L*N);
 
     // Test 2: angles are finite
@@ -478,8 +523,15 @@
       stagOk = Math.abs((a1 - target)) < 1e-9 || Math.abs((a1 - (target%(2*Math.PI)))) < 1e-9;
     }
 
-    setBadge(mathBadge, `math: ${lenOk && finOk && stagOk ? 'ok' : 'fail'}`, (lenOk && finOk && stagOk) ? 'ok' : 'fail');
-    return {lenOk, finOk, stagOk};
+    const cw = generatePath('clockwise',L,N), ccw = generatePath('anticlockwise',L,N);
+    const reverseOk = ccw.every((p,k)=>Math.abs(p.angle-cw[Math.floor(k/N)*N+(N-k%N)%N].angle)<1e-9);
+    const distinctOk = pols.every((a,i)=>pols.slice(i+1).every(b=>{
+      const pa=generatePath(a,L,N),pb=generatePath(b,L,N);
+      return pa.some((p,k)=>Math.abs(Math.sin(p.angle)-Math.sin(pb[k].angle))>1e-9 || Math.abs(Math.cos(p.angle)-Math.cos(pb[k].angle))>1e-9);
+    }));
+    const ok = lenOk && finOk && stagOk && reverseOk && distinctOk;
+    setBadge(mathBadge, `trace checks: ${ok ? 'ok' : 'fail'}`, ok ? 'ok' : 'fail');
+    return {lenOk, finOk, stagOk, reverseOk, distinctOk};
   }
 
   // ---------- boot / watchdog / interaction ----------
@@ -487,6 +539,8 @@
     console.error('fallback:', reason);
     setBadge(statusBadge, 'boot: fallback', 'fail');
     setBadge(smokeBadge,  'smoke: fail', 'fail');
+    setBadge(renderBadge, 'render: fail', 'fail');
+    delete container.dataset.smoke;
     window.__canvasStatus = 'fallback';
     showToast(`Fallback activated (${String(reason)}) — rendering disabled.`, 'bad');
 
@@ -523,7 +577,19 @@
       drawOn(SM[k], wrap, k, {levels:L, bricks:N});
     });
 
+    const descriptions = {
+      clockwise:'Clockwise on every course, beginning at the right-hand seam.',
+      anticlockwise:'Anticlockwise on every course, beginning at the same right-hand seam.',
+      alternating:'Clockwise on the first course, then alternating direction on successive courses.',
+      staggered:'Alternating direction, with every second course shifted half a brick: the layout changes too.'
+    };
+    document.getElementById('traceSummary').textContent = `${descriptions[policy]} ${L} courses × ${N} bricks = ${L*N} ordered placements.`;
+    // Readiness means every canvas was successfully drawn, not merely scheduled.
+    container.dataset.smoke = 'ok';
+    setBadge(statusBadge, 'boot: ok', 'ok');
+    setBadge(smokeBadge, 'smoke: ok', 'ok');
     setBadge(renderBadge, 'render: ok', 'ok');
+    window.__canvasStatus = 'ready';
     return mainRes;
   }
 
@@ -560,7 +626,6 @@
     function syncFromUI(){
       const policy = modeSel.value;
       setPressed(policy);
-      pills.forEach(b => b.blur());
       scheduleRedraw();
       runTests();
     }
@@ -573,48 +638,17 @@
         modeSel.value = btn.dataset.set;
         syncFromUI();
       });
-      btn.addEventListener('touchstart', ()=>{
-        modeSel.value = btn.dataset.set;
-        syncFromUI();
-      }, {passive:true});
     });
 
     // initial draw (ensure layout is computed)
     scheduleRedraw();
     runTests();
 
-    // mark smoke success on CONTAINER (as per watchdog rule)
-    container.setAttribute('data-smoke', 'ok');
-    container.dataset.smoke = 'ok';
-    container.setAttribute('data-smoke', 'ok'); // redundancy for some DOMs
-    container.setAttribute('data-smoke', 'ok'); // yes, intentionally repeated (harmless)
-
-    setBadge(statusBadge, 'boot: ok', 'ok');
-    setBadge(smokeBadge,  'smoke: ok', 'ok');
-    window.__canvasStatus = 'ready';
-
-    // visibility watchdog: looks for descendant with [data-smoke="ok"] inside container
+    // The renderer marks this same container after successful drawing.
     const start = performance.now();
     const interval = 500;
     function watchdog(){
-      const ok = container.querySelector('[data-smoke="ok"]');
-      if(ok){
-        // ensure it is set on the container itself (descendant query includes self? depends; ensure a child exists)
-        // Create a tiny invisible sentinel child so descendant query always succeeds.
-        let sentinel = container.querySelector('[data-smoke-sentinel="1"]');
-        if(!sentinel){
-          sentinel = document.createElement('div');
-          sentinel.style.position = 'absolute';
-          sentinel.style.width = '1px';
-          sentinel.style.height = '1px';
-          sentinel.style.opacity = '0';
-          sentinel.setAttribute('data-smoke', 'ok');
-          sentinel.setAttribute('data-smoke-sentinel', '1');
-          container.style.position = 'relative';
-          container.appendChild(sentinel);
-        }
-        return;
-      }
+      if(container.dataset.smoke==='ok' || window.__canvasStatus==='fallback') return;
       if(performance.now() - start >= timeoutMs){
         fallback('timeout');
         return;
@@ -623,22 +657,19 @@
     }
     setTimeout(watchdog, 500);
 
-    showToast('Initialised OK (window.__canvasStatus = "ready").', 'good');
   }
 
   // ---------- boot sequence with robust try/catch ----------
   try{
     setBadge(statusBadge, 'boot: starting', null);
     setBadge(smokeBadge,  'smoke: pending', null);
-    setBadge(mathBadge,   'math: pending', null);
+    setBadge(mathBadge,   'trace checks: pending', null);
     setBadge(renderBadge, 'render: pending', null);
 
     // If DOM is already ready, init immediately; else wait.
-    if(document.readyState === 'complete' || document.readyState === 'interactive'){
-      init();
-    } else {
-      document.addEventListener('DOMContentLoaded', init, {once:true});
-    }
+    const boot = ()=>{try{init();}catch(e){fallback(e);}};
+    if(document.readyState === 'complete' || document.readyState === 'interactive') boot();
+    else document.addEventListener('DOMContentLoaded', boot, {once:true});
   } catch(e) {
     fallback(e);
   }

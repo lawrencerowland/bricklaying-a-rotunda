@@ -69,7 +69,7 @@
             slot-observation lens framing.
           </p>
           <div class="nav-links">
-            <a href="index.html">← Back to apps index</a>
+            <a href="../index.html">← Back to apps index</a>
             <a href="toy_project_dynamics_lenses_demo.html">Open the demo →</a>
           </div>
         </div>
@@ -77,23 +77,17 @@
 
       <section class="note-section">
         <p>
-          We can treat “project progress” as a state space whose local “tangent data” is just the
-          admissible next-completions, i.e. a discrete tangent bundle given by the outgoing
-          transition relation at each partial blueprint, and a “vector field” is then a
-          policy/strategy selecting one admissible next-step per state. The brick-cylinder toy
-          makes this concrete: each partial course-fill is a state, each choice of clockwise/
-          anticlockwise (and start-offset) is a direction in the discrete tangent fiber, and
-          “curing/doping” adds extra state coordinates that introduce holonomy-like constraints by
-          forcing dwell-time in intermediate nodes. For the continuous slot-observation system,
-          I’ll use Myers’ lens orientation (inputs on top, outputs on bottom) so expose is
-          passforward and update is passback—this lines up with the dynamical-systems interface
-          conventions in his systems-theory treatment.
+          A project state records what is needed to determine its possible next steps. The outgoing
+          action set is a useful discrete analogy to tangent directions, not a vector space.
+          A deterministic policy selects an action; iterating the update generates a trajectory.
+          Curing adds a timer to the state. Myers-style lenses separate state, readout and update,
+          so the information shown to an observer is not confused with the full state used by the model.
         </p>
       </section>
 
       <section class="note-section">
         <h2>1) Discrete toy model: cylindrical brickwork as a state-transition system</h2>
-        <p><strong>State space X (discretised “manifold”)</strong></p>
+        <p><strong>State space X (finite state set)</strong></p>
         <p>Fix:</p>
         <ul>
           <li>N: number of courses (height)</li>
@@ -123,7 +117,7 @@
           <li>wait if κ &gt; 0</li>
         </ul>
         <p>
-          A (deterministic) vector field is then a function selecting a unique action
+          A deterministic policy is a function selecting a unique action
           <code>v(x) ∈ T<sub>x</sub>X</code>. If you want branching, switch to possibilistic/
           stochastic dynamics (Myers explicitly packages those as lenses too).
         </p>
@@ -214,12 +208,12 @@ update(State, input):
         <ol>
           <li>Init: (θ<sub>0</sub>, ω, r) ↦ s<sub>0</sub></li>
           <li>Dynamics: closed differential system evolving s(t)</li>
-          <li>Slot sensor: maps internal state to “visible-or-null” observation stream</li>
+          <li>Slot sensor: an observation function producing visible coordinates or null</li>
           <li>Observer: post-process stream into entry/exit intervals (events)</li>
         </ol>
         <p>
-          This is also where the “open system” intuition sits: you can keep the core dynamics
-          closed, and treat openness as re-interfacing by pre/post lenses.
+          This is also where the “open system” intuition sits: you can distinguish closed dynamics, initial conditions and the observer's readout. A genuine
+          open-system extension must specify how time-varying input changes the state.
         </p>
         <p><strong>Formal lens for the dynamics box (Myers style)</strong></p>
         <p>
@@ -241,9 +235,11 @@ update(State, input):
           encoding: θ̇ = ω, ω̇ = 0, ṙ = 0, τ̇ = 1.
         </p>
         <p>
-          Then the Slot sensor is a (separate) lens/interface map that turns (θ, r, τ) into
-          (vis, x, y, τ), with x = r cos θ, y = r sin θ and vis an indicator for θ falling in the
-          slot arc (or a smooth approximation if you want to stay inside smooth maps).
+          The observation is null outside the slot, and (x, y, τ) inside, with x = r cos θ and
+          y = r sin θ. No hidden position is included in the null observation. The demo's full
+          circle and faint trail are an omniscient teaching view, not the sensor's output.
+          A hard gate is discontinuous, so it is not a smooth Euc map. Initialisation selects the
+          starting state; it is not a lens that continually resets the dynamics.
         </p>
       </section>
 
@@ -268,19 +264,14 @@ update(State, input):
       </section>
 
       <section class="note-section">
-        <h2>5) Where this is heading (the “research leader” move)</h2>
-        <p>
-          The non-obvious next step is to stop treating “blueprint progress” as a flat product
-          state and instead treat the blueprint as a presheaf/sheaf of local completion data, where
-          restrictions are dependency projections (e.g., vertical constraints, curing constraints
-          as temporal modalities), so that “policy” becomes a section-selection problem and
-          constraints become a kind of local-to-global obstruction.
-        </p>
-        <p>
-          Try rephrasing “curing” as a modal operator (a tiny temporal type theory) and see what
-          the corresponding lens composition looks like when the modality is implemented as a
-          comonad on your project state space.
-        </p>
+        <h2>5) The next dynamical question</h2>
+        <p>Which state distinctions must an interface expose to support valid future choices?
+        A progress picture may hide a curing timer or occupied resource. The
+        <a href="constructive-state/">constructive experiment</a> computes counterexamples,
+        refines a summary and generates full-completion paths from the resulting dynamics.</p>
+        <p>Open-system composition requires explicit readout and update maps and a clear clock.
+        A summary sufficient after one wiring may fail after resources change. That is a testable
+        dynamics question, not a claim that category-theory vocabulary supplies physical laws.</p>
       </section>
     </main>
   </body>

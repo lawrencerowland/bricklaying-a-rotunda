@@ -2,31 +2,25 @@
 
 Foray 120 · 6 September 2026 · constructive finite experiment
 
-[Open the experiment](./) · [All twelve predecessors](../../index.html)
+[Open the experiment](./) · [Essay collection](../../index.html)
 
 ## The answer to the end–way question
 
-The restricted discrete end is delivered: a project has a generated state-transition system, admissible alternative completion trajectories, a completion policy, working building views and analytics. The proposed way works **with necessary additions and one correction**. Gluing assembles compatible descriptions; it does not supply process laws or establish reachability. Those laws are supplied locally, composed, and searched. A section of the state-indexed action bundle selects a policy; iteration produces a trajectory. A trajectory is not itself such a section.
+The restricted discrete end is delivered: a project has a generated state-transition system, admissible alternative completion trajectories, a completion policy, working building views and analytics. The proposed way works **with necessary additions and one correction**. Process laws are supplied locally, composed through explicit interfaces, and searched from the initial state. A section of the state-indexed action bundle selects a policy; iteration produces a trajectory. A trajectory is not itself such a section.
 
-This is a constructive answer within a finite model, not validation of a smooth project manifold or proof for arbitrary projects. The separate continuous circle/slot-observation extension is not completed here. The twelve earlier essays remain byte-for-byte unchanged.
+This is a constructive answer within a finite model, not validation of a smooth project manifold or proof for arbitrary projects. The separate continuous circle/slot-observation extension is not completed here. The curated companion essays explore other dynamics and observation questions separately.
 
 ## What is supplied, and what is produced
 
 Supplied: two separate cylindrical installations; labelled brick positions; cyclic adjacency; course support; placement and curing durations; a reusable shared hoist pool; a common tick; empty initial conditions; and an explicit completed-and-cured goal. These are primitive geometry and local process rules, not a global successor table or a planted route. Four bricks and two courses per ring are the default. Either end of a contiguous occupied run may be extended at each placement. This is more permissive than choosing one fixed clockwise/anticlockwise direction per course; four slots have 16 connected orders rather than 8 fixed-direction orders. With two or three slots, adjacency excludes no otherwise unplaced brick; four makes that geometric restriction substantive.
 
-Produced: each component's reachable local catalog; the compatible global assignment space; the actually reachable joint graph; a behaviour-preserving refinement of a chosen summary; the quotient dynamics; shortest completion distances and exact labelled path counts; and concrete replays generated from a policy. Nothing is learned from external project data. In particular, refinement uses the supplied detailed model: it does not discover missing physics from the drawing.
+Produced: the actually reachable joint graph; a behaviour-preserving refinement of a chosen summary; the quotient dynamics; shortest completion distances and exact labelled path counts; and concrete replays generated from a policy. Nothing is learned from external project data. In particular, refinement uses the supplied detailed model: it does not discover missing physics from the drawing.
 
-## 1. Gluing is a construction, but not a history
+## 1. The research contract
 
-For a finite discrete variable set V with declared finite value domains D_v, define F(U)=product of D_v for v in U. Restriction forgets variables. A matching family has a unique union assignment on its union of patches, so this assignment presheaf is a sheaf for ordinary covers. The implementation declares the domains, rejects out-of-domain values, restricts sections, checks overlaps and requires exact coverage. Values are canonical JSON encodings.
+End: construct project states from which valid full-completion paths can be generated. Way: state local rules and open-system interfaces, compose them, derive sufficient state and a completing policy. Means: finite enumeration, refinement, exact counts, counterexamples and replay.
 
-The dynamic-state cover has three patches: {front.A, reserve.A}, {front.B, reserve.B}, and {reserve.A, reserve.B}. Each front value records its labelled brick mask, course timers and active work. Local sections are selected from the front's independently reachable catalog with reservation equal to active-work status. The central patch permits only reservation pairs within pool capacity. The natural join is calculated by the actual assignment-gluing operation, not merely labelled as gluing after a capacity check.
-
-The underlying assignment sheaf is not a claim that arbitrary physically legal assignments form a sheaf on every cover. Capacity is a relation spanning both reservations and must be represented on a patch covering both. Geometry and process constraints enter the front catalogs; no topology-to-physics theorem is claimed.
-
-At the default: 79 A states times 81 B states gives 6,399 independent pairs. The central relation excludes 2,304 over-reserved pairs. Of the 4,095 compatible states, only 3,883 are jointly reachable. The program checks that every reachable state belongs to the compatible assignment space.
-
-A concrete obstruction: A has just begun its first two-tick placement, while B has just completed its first course and has all three curing ticks remaining. Only A currently holds a hoist, so the tuple passes present capacity and every local rule. But in the immediately preceding tick B held the sole hoist through its end, while A would have needed that hoist at its beginning. No joint history exists. This is a temporal obstruction, not an inconsistent present assignment.
+Assumptions are supplied and visible; results are computed. A toy result is not a validated engineering plan. A summary is rejected if it merges states with different goal status or labelled futures. A proposed completion is rejected if it violates support, capacity, curing or the complete goal. The practical unresolved issue is how the necessary state distinctions will be observed or tracked.
 
 ## 2. Composition supplies the dynamics
 
@@ -34,7 +28,7 @@ Each front has a local request menu and update map. The pool has its own update:
 
 Tick order is precise: check support/readiness and reserve at the start; advance active or newly started placements and existing curing clocks once; release finishing jobs at the end; start a newly completed course's full curing period at that end. A released hoist cannot be reused earlier in the same tick. Advancing time through curing is not an identity operation.
 
-In Myers's dependent deterministic convention, the interface has outputs O and input fibres I(o). The readout r:S→O exposes legal local request menus, active-job finishing information and current reservations. The backward/update part is u:S×_O I→S. Written with inputs above outputs, the system lens is (u,r): S/S → I/O. The app's wireTick is this update assembled from the component maps and the feasible-input relation. Spivak's familiar state/readout/update presentation carries the same data in the discrete setting; the dependent-input convention is useful here because feasibility changes with the output.
+In Myers's dependent deterministic convention, the interface has outputs O and input fibres I(o). The readout r:S→O exposes terminal completion status, legal local request menus, active-job finishing information and current reservations. Completion status is essential: the terminal goal has no inputs, whereas an unfinished but idle state still permits a wait tick. The backward/update part is u:S×_O I→S. Written with inputs above outputs, the system lens is (u,r): S/S → I/O. The app's wireTick is this update assembled from the component maps and the feasible-input relation. Spivak's familiar state/readout/update presentation carries the same data in the discrete setting; the dependent-input convention is useful here because feasibility changes with the output.
 
 The blueprint summary q is **not** silently substituted for this full interface. It can only expose exactly the legal input menu if it preserves the relevant distinctions. A constant input alphabet with rejection could be used for a different lens, but that would not establish the stronger exact-menu claim tested here.
 
@@ -75,9 +69,9 @@ node tests/constructive-state-oracle.cjs apps/constructive-state/core.js
 node tests/constructive-state-laws.cjs
 ```
 
-The independent oracle exhaustively checks the reachable model **within each of 108 selected configurations**, not every possible combination of controls: 91,777 states, 240,663 labelled transitions, 275,331 quotient-state checks, 273,147 policy lifts, 540 completed routes and 108 impossible-route cases. It also checks illegal and malformed actions and non-adjacent placement. Separate tests check the assignment laws on a complete three-Boolean-variable fixture (2,175 assertions including error guards), default natural-join counts, the changed-wiring witness and the independent combinatorial count.
+The independent oracle exhaustively checks the reachable model **within each of 108 selected configurations**, not every possible combination of controls: 91,777 states, 240,663 labelled transitions, 275,331 quotient-state checks, 273,147 policy lifts, 540 completed routes and 108 impossible-route cases. It also checks illegal and malformed actions and non-adjacent placement. Separate tests check pool capacity and release guards, default refinement, the changed-wiring witness and an independent combinatorial path count.
 
-The browser test uses only the ordinary controls and displayed results: enter via the index; generate/replay/replan; compare summaries; test changed wiring and inconsistent overlaps; close access; reopen URL settings; correct/reset and reload; recover from invalid URL assumptions; check mobile width, keyboard action and return to all 13 essays. Run with Playwright and installed Chrome against a served repository root:
+The browser test uses only the ordinary controls and displayed results: enter via the index; generate/replay/replan; compare summaries; test changed wiring; close access; reopen URL settings; correct/reset and reload; recover from invalid URL assumptions; check mobile width, keyboard action and return to the seven-essay collection. Run with Playwright and installed Chrome against a served repository root:
 
 ```sh
 node tests/constructive-state-browser.cjs http://localhost:8767/
@@ -87,26 +81,11 @@ The app is deliberately ephemeral: it creates no authoritative project record or
 
 ## Source use and bibliography
 
-The fixed nine-document set was consulted with focused reading of the longer works. The lens slides, open-systems abstract, 2025 process-theory paper, resource-theory article and secondary context note were read in full as text; the longer book, thesis, physicist survey and research playbook were read selectively. Source concepts informed the construction; the finite model and numerical claims were tested separately.
+The maintained construction uses Myers's state/readout/update and dependent-interface discipline, with Spivak's open-system presentation and resource-aware composition as supporting context. The finite model, refinement proof and computed witnesses are additional work, not ready-made planning algorithms attributed to these sources.
 
-Spivak/Myers supply the interface and open-system discipline; Coecke and collaborators distinguish composition syntax, semantics, resources and equivalence; Lynch informs relational matching. The playbook steered the experiment toward the potentially missing construction that would decide whether the end is attainable. The model, refinement proof and computed witnesses here are additional work, not attributed as ready-made planning algorithms from those sources.
+- David Jaz Myers (2023), *Categorical Systems Theory*, draft updated 3 September 2023, especially §§1.2–1.3, 3.5.3 and 4.2. [Author's book](https://www.davidjaz.com/Papers/DynamicalBook.pdf).
+- David Jaz Myers (2021), *Double Categories of Open Dynamical Systems*, §§1–3, 5–6. [Published article](https://doi.org/10.4204/EPTCS.333.11).
+- David I. Spivak (2019), *Lenses: applications and generalizations*. [Author-hosted slides](https://dspivak.net/talks/pdfs/20190000-riverside2019.pdf).
+- Bob Coecke, Tobias Fritz and Robert W. Spekkens (2016), *A mathematical theory of resources*. Parallel composition does not duplicate a physical hoist. [Published article](https://doi.org/10.1016/j.ic.2016.02.008).
 
-Public-only entries below contain no private record links or local paths. They name the actual sources used and preserve edition differences.
-
-1. David I. Spivak (2019). *Lenses: applications and generalizations*. UC Riverside talk slides. [Author-hosted slides](https://dspivak.net/talks/pdfs/20190000-riverside2019.pdf). The public PDF includes animation overlays; page count differs from the fixed handout.
-
-2. David Jaz Myers (2023). *Categorical Systems Theory*. Draft, last updated 3 September 2023. [Author's book PDF](https://www.davidjaz.com/Papers/DynamicalBook.pdf). Selected sections consulted, not the entire book.
-
-3. David Jaz Myers (2021). *Double Categories of Open Dynamical Systems (Extended Abstract)*. *Electronic Proceedings in Theoretical Computer Science* 333, 154–167. [Published article DOI](https://doi.org/10.4204/EPTCS.333.11); [author-deposited preprint, v2](https://arxiv.org/abs/2005.05956v2).
-
-4. John H. Selby, Maria E. Stasinou, Matt Wilson and Bob Coecke (2025). *Generalised Process Theories*. arXiv:2502.10368v1, 14 February 2025. [Version consulted](https://arxiv.org/abs/2502.10368v1).
-
-5. Bob Coecke and Éric Oliver Paquette (2009). *Categories for the practising physicist*. arXiv:0905.3010, fixed reading copy v2. [Author-deposited preprint](https://arxiv.org/abs/0905.3010). Selected sections consulted.
-
-6. Ben Reinhardt and Eileen Nakahata (2025). *A Playbook for Research Leaders*. Speculative Technologies, Spring 2025 edition. [Publisher's current online edition](https://spec.tech/library/research-leaders-playbook). The linked web edition is dated 13 February 2026; it is not represented as a page-identical copy of the Spring 2025 PDF. Selected sections consulted.
-
-7. Bob Coecke, Tobias Fritz and Robert W. Spekkens (2016). *A mathematical theory of resources*. *Information and Computation* 250, 59–86. [Published article DOI](https://doi.org/10.1016/j.ic.2016.02.008); [2014 preprint](https://arxiv.org/abs/1409.5531). The fixed reading copy was the final journal article.
-
-8. Owen Lynch (2022). *Relational Composition of Physical Systems: A Categorical Approach*. MSc thesis, Universiteit Utrecht, July 2022. [Later corrected public version](https://arxiv.org/abs/2310.06088). The later-version distinction is confirmed on [the supervisor's thesis listing](https://math.ucr.edu/home/baez/theses.html); the old author-hosted 2022 PDF URL currently returns 404. Selected sections of the fixed 2022 copy were consulted.
-
-The ninth fixed document was an AI-generated secondary context note. It is deliberately not presented as an authoritative publication or attributed to the authors of the primary papers; no verified public edition is available.
+Historical source-reading records remain in the private research archive. The current public essay makes only the scoped dynamics claims above.

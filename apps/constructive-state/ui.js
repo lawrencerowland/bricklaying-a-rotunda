@@ -75,22 +75,11 @@ function drawRefinement() {
   $('witness').querySelectorAll('[data-witness]').forEach(b => b.addEventListener('click', () => { trace = C.routeTo(g, Number(b.dataset.witness)); at = trace.length - 1; drawPath(); showPanel('build'); }));
   $('context-result').textContent = '';
 }
-function drawGlue() {
-  const j = model.join;
-  $('join-results').innerHTML = '<div class="table-scroll"><table><thead><tr><th>Constructed set</th><th>Size</th><th>Meaning</th></tr></thead><tbody><tr><td>Independent component pairs</td><td>' + fmt(j.rawPairs) + '</td><td>' + j.localA + ' A states × ' + j.localB + ' B states</td></tr><tr><td>Compatible with capacity</td><td>' + fmt(j.compatible) + '</td><td>' + fmt(j.missingInterface) + ' over-reserved pairs excluded</td></tr><tr><td>Reachable from the start</td><td>' + fmt(j.reachable) + '</td><td>' + fmt(j.compatible - j.reachable) + ' compatible tuples have no joint history</td></tr></tbody></table></div>';
-  $('orphan').innerHTML = j.orphan ? '<div class="rings">' + ringHTML(j.orphan) + '</div><p class="bad">No path reaches this exact combination of brickwork, timers and reservations.</p>' : '<p class="good">Every compatible tuple is reachable for these parameters. This gap is not forced in every model.</p>';
-  checkGlue();
-}
-function checkGlue() {
-  const a = Number($('local-claim').value), h = Number($('pool-claim').value), r = C.glue([{ 'A.reserved': a, 'A.workfront': 'A' }, { 'A.reserved': h, 'pool.capacity': model?.g.c.capacity ?? 1 }]);
-  $('glue-result').className = r.compatible ? 'good' : 'bad';
-  $('glue-result').textContent = r.compatible ? 'Unique glued assignment. Agreement on these fields only—not legality or reachability.' : 'No glued assignment: A.reserved has contradictory overlap values.';
-}
 function drawAll() {
   const { g, p, solution, verification } = model;
   $('stat-reachable').textContent = fmt(g.states.length); $('stat-classes').textContent = fmt(p.groups.length); $('stat-time').textContent = fmt(solution.distance[p.of[0]]); $('stat-paths').textContent = solution.counts[p.of[0]].toLocaleString('en-GB');
   $('certificate').innerHTML = '<h3>Certificate for these settings</h3><p class="note">' + fmt(g.states.length) + ' reachable states · ' + fmt(verification.transitions) + ' transitions · ' + fmt(p.groups.length) + ' stable classes · ' + fmt(verification.policyLifts) + ' concrete policy lifts checked. ' + fmt(verification.unreachable) + ' classes cannot reach the goal. Exhaustive finite-model checks, not real-world physics evidence.</p>';
-  trace = C.trajectory(g, p, solution, 0, $('preference').value); at = 0; drawPath(); drawRefinement(); drawGlue(); if(!$('panel-site').hidden)enterSite();
+  trace = C.trajectory(g, p, solution, 0, $('preference').value); at = 0; drawPath(); drawRefinement(); if(!$('panel-site').hidden)enterSite();
 }
 function construct(c, urlWarning = false) {
   stop(); const run = ++revision; for (const el of form.elements) el.disabled = true; $('status').textContent = 'Constructing, wiring, refining and solving…'; form.setAttribute('aria-busy', 'true');
@@ -113,7 +102,6 @@ $('site-restart').addEventListener('click',()=>{at=0;motionPhase=0;sitePaused=fa
 $('site-position').addEventListener('input',()=>{sitePaused=true;at=Number($('site-position').value);drawPath();});
 $('site-details').addEventListener('click',()=>{drawPath();showPanel('build');});
 $('take').addEventListener('click', () => { const index = trace[at].state, edge = model.g.edges[index][Number($('manual').value)]; if (!edge) return; const head = trace.slice(0, at + 1); const tail = C.trajectory(model.g, model.p, model.solution, edge.to, $('preference').value); tail[0].action = edge.action; trace = head.concat(tail); at = head.length; drawPath(); });
-$('local-claim').addEventListener('change', checkGlue); $('pool-claim').addEventListener('change', checkGlue);
 $('context-test').addEventListener('click', () => {
   const base = C.graph({ ...model.g.c, capacity: 1 }), p = C.refine(base), alt = C.graph({ ...model.g.c, capacity: 2 });
   let found = null;
@@ -129,5 +117,5 @@ let cfg = { ...C.defaults }, invalid = false;
 const params = new URL(location.href).searchParams;
 for (const name of Object.keys(cfg)) if (params.has(name)) { const value = params.get(name); if (name === 'blockedB') { if (!['true','false'].includes(value)) invalid = true; cfg[name] = value === 'true'; } else cfg[name] = Number(value); }
 try { if (invalid) throw Error('Invalid URL flag'); C.config(cfg); } catch (_) { cfg = { ...C.defaults }; invalid = true; }
-const requestedPanel=location.hash.slice(1);if(['site','state','glue','verdict','formal'].includes(requestedPanel))showPanel(requestedPanel);
+const requestedPanel=location.hash.slice(1);if(['site','state','verdict','formal'].includes(requestedPanel))showPanel(requestedPanel);
 fillSettings(cfg); construct(cfg, invalid);

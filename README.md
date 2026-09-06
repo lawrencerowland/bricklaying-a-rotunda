@@ -1,35 +1,56 @@
-# Dynamic project states — bricklaying a rotunda
+# Dynamics and lenses · Foray 120
 
-[Open the essay collection](https://lawrencerowland.github.io/bricklaying-a-rotunda/) · [Latest constructive experiment](https://lawrencerowland.github.io/bricklaying-a-rotunda/apps/constructive-state/)
+[Open the essay collection](https://lawrencerowland.github.io/bricklaying-a-rotunda/)
 
-This repository holds separate essays for **Foray 120**, not successive replacements of one app. All twelve earlier essays remain in the catalogue.
+**End:** represent project states in enough detail to generate valid paths to full completion.
+**Way:** specify state, readout and update in the spirit of Myers; connect local systems through explicit interfaces; test the resulting dynamics.
+**Means:** small interactive models, finite enumeration, analytic intervals, counterexamples and replay.
 
-## September 2026: Can a blueprint carry the dynamics?
+## Seven distinct essays
 
-The new essay constructs compatible assignments, composes two local workfronts with a shared hoist pool, generates the reachable graph, refines an insufficient state summary, and derives completion policies and trajectories. Its two-ring toy gives a detailed conditional answer to the proposed blueprint/sheaf/lens route to project dynamics.
+Original numbers remain stable.
 
-The important distinctions are compatibility versus reachability; summary versus sufficient state; policy section versus trajectory; and closed-composite equivalence versus safe reuse under changed wiring. Local laws and timing assumptions are supplied explicitly. The finite model does not establish a smooth project manifold or engineering validity.
+- **5 · Bricklaying Trajectories:** spatial routes, direction and staggered courses in radial comparisons.
+- **6 · Toy Project Dynamics:** direction/start choices and a continuous partial-observation example; [companion notes](apps/toy_project_dynamics_lenses_notes.html).
+- **8 · Revised Interactive Model:** course rules, curing, setup costs, feasible policy selection and timing analytics.
+- **9 · Wiring Diagrams ↔ Lenses:** the formal interface/reindexing mechanism.
+- **11 · Offshore Wind Maintenance:** weather-window and deadline-constrained scheduling.
+- **12 · Brick Cylinder:** the simple choice/policy/trajectory primer.
+- **13 · Can a blueprint carry the dynamics?:** component updates, shared resources, reachable states, sufficient summaries and generated full-completion paths.
 
-[Method, proofs, sources and tests](apps/constructive-state/METHOD.md)
+[Preservation and consolidation map](CURATION.md). Earlier versions remain in Git history; retired routes lead to their maintained replacements.
 
-### Picture the site
+## Constructive experiment
 
-The second tab is a [looping hilltop construction scene](https://lawrencerowland.github.io/bricklaying-a-rotunda/apps/constructive-state/#site): two cylindrical brick towers, curing courses and a shared hoist (or two when capacity is changed). Pause, replay or scrub the scene, then inspect the current tick boundary in the analytical view. Reduced-motion preferences are respected. This is a live projection of the existing generated route, not an independent animation with different construction rules.
+[Open #13](https://lawrencerowland.github.io/bricklaying-a-rotunda/apps/constructive-state/) · [Method and limits](apps/constructive-state/METHOD.md)
 
-The imagined Manorwater/Borders setting supplies a visual motivator, not historical or engineering evidence. [Artwork provenance and exact generation prompt](apps/constructive-state/ARTWORK.md) distinguish the generated landscape from the model-driven construction overlay. This visual increment is `FORAY-DYNAMIC-PROJECT-STATES · R-011`; it improves scenario recognition without changing the mathematical result or retiring any earlier view.
+The default finite toy produces 3,883 reachable states, 3,508 sufficient classes, a 34-tick optimum and 38,797,312 shortest labelled paths. Two hoists reduce the optimum to 22 ticks. These results depend on explicit placement, support, curing, clock, resource and goal assumptions; they are not engineering validation.
+
+The second tab, [Picture the site](https://lawrencerowland.github.io/bricklaying-a-rotunda/apps/constructive-state/#site), preserves the animated imagined Manorwater hilltop, two cylindrical brick towers and model-linked hoists. [Artwork provenance](apps/constructive-state/ARTWORK.md).
+
+## Verification
+
+No build or external runtime dependency is required by the apps. Model checks use Node; browser checks need Playwright, installed Chrome and a served repository root.
 
 ```sh
 node tests/constructive-state-oracle.cjs apps/constructive-state/core.js
 node tests/constructive-state-laws.cjs
 node tests/constructive-state-scene.cjs
+node tests/backbone-model.cjs
+node tests/offshore-model.cjs
+node tests/spatial-orders.cjs
+node tests/constructive-state-browser.cjs http://127.0.0.1:8767/
+node tests/constructive-state-scene-browser.cjs http://127.0.0.1:8767/
+node tests/collection-browser.cjs http://127.0.0.1:8767/
+node tests/slot-and-primer-browser.cjs http://127.0.0.1:8767/
+node tests/backbone-browser.cjs http://127.0.0.1:8767/apps/Lens-plus-arena-backbone.html
+node tests/offshore-browser.cjs http://127.0.0.1:8767/apps/offshore_wind_maintenance_lens_copy.html
 ```
-
-The browser check needs Playwright, installed Chrome and a served repository root. No build or external runtime dependency is required by the app itself.
 
 ## Plan-layer handshake
 
-`FORAY-DYNAMIC-PROJECT-STATES` · experiment receipt `R-010` · 6 September 2026.
+`FORAY-DYNAMIC-PROJECT-STATES · R-012 · 6 September 2026`
 
-Plan-layer change: the discrete end is now constructively realised under stated assumptions, and the missing additions to the proposed way are explicit. Static gluing alone cannot yield temporal feasibility; a policy section generates paths rather than being a path; and a summary derived after composition may fail when resource wiring changes. This is one bounded essay, not closure of the whole foray or the optional continuous extension.
+The collection is curated around dynamics and Myers-style lenses. The principal construction retains resource composition, refinement and completing policies. A policy selects an action; iteration generates a trajectory. An abstraction established after composition may fail when resource wiring changes. The finite toy advances the stated end under supplied assumptions; it does not close the whole foray.
 
-The canonical private source ledger and run report remain in the foray's working home. Private source copies and record identifiers are not published here.
+Canonical research receipts and historical source-reading records remain in the private working home. No private source copies or record identifiers are published.

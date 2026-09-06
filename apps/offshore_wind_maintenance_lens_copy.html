@@ -404,6 +404,14 @@
     }
     .toast.show{ opacity: 1; }
 
+    .grid > *, .panel, .field, .canvasWrap { min-width: 0; }
+    .container { width: 100%; }
+    input, select, textarea { max-width: 100%; }
+    .code { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .notice { margin: 10px 0; padding: 10px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 15%, var(--panel)); }
+    .tableScroll { max-width: 100%; overflow: auto; }
+    @media(max-width:640px){ header{position:static} .container{padding:10px} .grid{grid-template-columns:minmax(0,1fr)} .panel{padding:10px} .titleRow>div{min-width:0} .field.small{flex:1 1 110px} }
+
     .footerNote{
       margin-top: 18px;
       font-size: .82rem;
@@ -418,7 +426,7 @@
       <div>
         <h1>Offshore‑Wind Maintenance Lens with “Doping” Constraints <span class="tag">Hornsea Two demo</span></h1>
         <div class="sub">
-          Input = forecast sea‑state (significant wave height). Output = turbine‑visit <em>visibility</em> through a 3‑hour weather window.
+          Input = forecast sea‑state (significant wave height). Output = turbine‑visit <em>visibility</em> through a <span data-window-label>3‑hour</span> weather window.
           This is a self‑contained toy model you can re‑wire and extend.
         </div>
       </div>
@@ -443,6 +451,9 @@
 
   <div class="container">
 
+    <div id="validationMessage" class="notice hidden" role="alert"></div>
+    <div id="sourceReceipt" class="mini" role="status">Synthetic weather. Edits are temporary in this tab; refreshing restores the preset. Export downloads a result file; importing accepts weather only, not a saved plan.</div>
+
     <!-- DASHBOARD TAB -->
     <section id="panelDash">
       <div class="grid">
@@ -450,7 +461,7 @@
           <h2>Inputs</h2>
 
           <div class="callout lvl0">
-            <strong>What you do here:</strong> pick a weather scenario + an O&amp;M “blueprint” (tasks with allowed date ranges), then compute when each task becomes <em>visible</em> (a safe 3‑hour window).
+            <strong>What you do here:</strong> pick a weather scenario + an O&amp;M “blueprint” (tasks with allowed date ranges), then compute when each task becomes <em>visible</em> (a safe <span data-window-label>3‑hour</span> window).
           </div>
 
           <div class="row">
@@ -486,7 +497,7 @@
             </div>
             <div class="field small">
               <label for="stepHrs">Step (hrs)</label>
-              <input id="stepHrs" type="number" value="1" min="1" max="6" step="1" />
+              <input id="stepHrs" type="number" value="1" min="0.25" max="6" step="any" />
             </div>
             <div class="field">
               <label for="policy">Scheduling policy</label>
@@ -522,18 +533,17 @@
           </table>
 
           <details class="lvl2" style="margin-top:10px">
-            <summary>CT note: doping as extra state dimension</summary>
+            <summary>CT note: operation classes and running state</summary>
             <div class="mini">
-              In the manifold picture, “doping” extends the state space from <span class="mono">S</span> to <span class="mono">S×D×C</span>,
-              where <span class="mono">D</span> is a discrete label set (levels) and <span class="mono">C</span> is a cooldown/phase variable.
-              This makes the local tangent options (what you can do next) depend on the label.
+              Each task has a fixed operation-class label. The running state would track time, completed tasks and crew-ready time.
+              The label changes the weather threshold and the cooldown applied after that visit; it is not itself a continuous dimension.
             </div>
           </details>
 
           <div class="hr"></div>
 
           <h3>O&amp;M blueprint (editable)</h3>
-          <div class="mini">Each row is a task with an allowed interval. The model will pick a 3‑hour safe slot inside the interval.</div>
+          <div class="mini">Each row is a task with an allowed interval. The model will pick a <span data-window-label>3‑hour</span> safe slot inside the interval.</div>
           <div class="mini lvl1">Preset is based on a Hornsea Two “Notice to Mariners” (non‑routine ops). Routine maintenance is typically not public in this format.</div>
 
           <div class="row" style="margin: 10px 0 6px;">
@@ -557,12 +567,8 @@
           </div>
 
           <details class="lvl2" style="margin-top:10px">
-            <summary>CT note: blueprint as sheaf‑like constraint</summary>
-            <div class="mini">
-              Think of each task interval as a local condition on a time‑patch. A “completed schedule” is a choice of a specific 3‑hour slot
-              in each interval that is compatible with the global constraints (cooldown, single crew, etc.). In sheaf language, that’s a global
-              section satisfying gluing/compatibility.
-            </div>
+            <summary>What the blueprint supplies</summary>
+            <div class="mini">The editable rows supply release times, inclusive completion deadlines and operation classes. The program searches sampled start times under the stated visit-duration and single-crew rules. This is a batch scheduling illustration, not a construction of a project state space.</div>
           </details>
 
         </aside>
@@ -581,14 +587,14 @@
             </div>
             <div class="kpi">
               <div class="num" id="kpiWeatherUtil">–</div>
-              <div class="lbl">Weather‑window utilisation (scheduled / available)</div>
+              <div class="lbl">Crew visit occupancy of forecast horizon (excluding cooldown)</div>
             </div>
           </div>
 
           <div class="hr"></div>
 
           <h3>Sea‑state forecast (Hs)</h3>
-          <div class="mini">Line = wave height. Shading = feasible 3‑hour start times for the selected doping level. Markers = task windows.</div>
+          <div class="mini">Line = wave height. Shading = feasible <span data-window-label>3‑hour</span> start times for the selected doping level. Markers = task windows.</div>
 
           <div class="row" style="margin-bottom:8px;">
             <div class="field small">
@@ -614,12 +620,12 @@
           </div>
           <div class="legend" aria-label="Legend">
             <span><span class="swatch accent"></span> Hs (significant wave height)</span>
-            <span><span class="swatch good"></span> feasible 3‑hr start</span>
+            <span><span class="swatch good"></span> feasible <span data-window-label>3‑hour</span> start</span>
             <span><span class="swatch bad"></span> task window</span>
           </div>
 
           <h3 style="margin-top:14px;">Schedule result</h3>
-          <div class="mini">For each task: earliest feasible 3‑hour slot inside its interval, given its doping constraints and the chosen policy.</div>
+          <div class="mini">For each task: earliest feasible <span data-window-label>3‑hour</span> slot inside its interval, given its doping constraints and the chosen policy.</div>
 
           <div style="overflow:auto; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);">
             <table aria-label="Schedule output">
@@ -640,7 +646,7 @@
 
           <h3>Progress trajectories</h3>
           <div class="mini lvl0">This chart shows the “building going up”: cumulative tasks completed over time.</div>
-          <div class="mini lvl2">Interpretation: a discrete section of a tangent bundle selects, at each state, one feasible next action — a policy as a vector field.</div>
+          <div class="mini lvl2">These are the two computed policy trajectories, not all feasible trajectories or a proof of optimality. Each step occurs when a whole visit finishes.</div>
 
           <div class="canvasWrap canvasSmall">
             <canvas id="progressCanvas" aria-label="Progress chart"></canvas>
@@ -664,52 +670,42 @@
         <section class="panel">
           <h2>Lens statement</h2>
           <div class="callout lvl0">
-            <strong>Lens idea:</strong> we separate what the system <em>exposes</em> (output) from how it <em>updates</em> when fed inputs.
-            That lets us re‑wire parts (forecast source, constraints, policies) by composing lenses.
+            <strong>Interface idea:</strong> separate the context a running system exposes from the forecast and action supplied to its update.
+            This page implements a batch forecast filter and two scheduling heuristics. The interface below explains a possible running-system interpretation; it is not an executable composition engine.
           </div>
-
           <div class="lvl1">
-            <h3>In plain operations language</h3>
+            <h3>What actually runs here</h3>
             <ul>
-              <li><span class="mono">State S</span> = where we are in the plan (time, which tasks are done, cooldown remaining).</li>
-              <li><span class="mono">Input I</span> = forecast sea‑state (Hs) over time at the site.</li>
-              <li><span class="mono">Output O</span> = “visibility”: whether a 3‑hour safe window exists (and when).</li>
-              <li><span class="mono">Update</span> = advance time and (optionally) commit to a task when a window opens.</li>
+              <li>Fixed parameters: task intervals, operation classes, visit duration and cooldown rules.</li>
+              <li>Batch input: a complete sampled forecast over a declared horizon.</li>
+              <li>Batch output: feasible starts and a schedule under the selected heuristic.</li>
+              <li>“Visibility” means weather eligibility, not observation of a hidden turbine state.</li>
             </ul>
           </div>
-
           <div class="lvl2">
-            <h3>Chosen formalism: Myers’ (Bun,T)-dynamical systems as generalized lenses</h3>
-            <p class="mini">
-              We use the notation of a <em>Bun‑lens</em> (a generalized lens defined from an indexed category <span class="mono">Bun</span>)
-              because it directly expresses an <em>open</em> dynamical system with “inputs valid at an orientation.”
-            </p>
-            <div class="code" aria-label="Lens equation">
-              (u / r) : (T S / S)  ⇆  (I / O)
+            <h3>Myers convention: a discrete running-system interface</h3>
+            <p class="mini">Write inputs above outputs. For a prospective stepwise version, let S contain current time, completed tasks and crew-ready time. Tasks and rules are fixed parameters. The readout O is the current time, remaining task identifiers and crew-ready time. At o, I(o) supplies a forecast valid for that context together with a proposed wait or visit.</p>
+            <div class="code" aria-label="Lens equation">(u, r) : (S / S) → (I / O)
+r : S → O
+u : S ×_O I → S
 
-              r : S → O                          (readout / orientation)
-              u : r*I → T S                      (update / dynamics)
-            </div>
-            <p class="mini">
-              Here <span class="mono">r*I</span> is the pullback: “inputs valid at the current readout.”
-              In our case, the readout exposes a time &amp; location (which turbine / asset), and the input bundle provides the forecast sea‑state at that time/location.
-            </p>
+r(s) exposes current scheduling context.
+u(s, forecast, action) validates the proposed action:
+a valid visit advances to its finish and records crew-ready time;
+wait advances to the next sample time;
+an invalid proposal is rejected without changing s.</div>
+            <p class="mini">This is the dependent deterministic convention, not a smooth tangent bundle. Weather eligibility is computed from the supplied forecast and rules; it is not falsely declared to be a readout of a state that excludes the weather. The batch functions below implement the two whole-schedule heuristics directly rather than exposing these maps as reusable components.</p>
           </div>
-
           <details class="lvl2" style="margin-top:10px">
-            <summary>Spivak alignment (deterministic systems as lenses)</summary>
-            <div class="mini">
-              In Spivak’s presentation, a (discrete) dynamical system with state <span class="mono">S</span> is a lens
-              with a readout map <span class="mono">S→A</span> and an update map <span class="mono">S×A'→S</span>.
-              This dashboard is exactly that shape: readout = visibility; update = advance/commit.
-            </div>
+            <summary>Spivak alignment</summary>
+            <div class="mini">With a constant input type, the same discrete interface uses a state-only readout S → O and an update S × I → S. The dependent formulation records that forecast/action data are indexed by the currently exposed context. Neither notation by itself proves that the scheduler completes the project or is optimal.</div>
           </details>
 
         </section>
 
         <section class="panel">
           <h2>Wiring diagram</h2>
-          <div class="mini">A schematic wiring diagram (as a lens) for this demo. Boxes are lenses; wires carry typed values.</div>
+          <div class="mini">A schematic data-flow diagram for the batch implementation. Arrows show dependency, not verified lens composition.</div>
 
           <div class="canvasWrap" style="padding:10px;">
             <svg id="wiringSvg" viewBox="0 0 940 360" width="100%" height="360" role="img" aria-label="Wiring diagram">
@@ -733,15 +729,15 @@
               <text x="48" y="96" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">Hs(t), wind(t), …</text>
 
               <rect x="330" y="40" width="280" height="90" rx="16" fill="rgba(148,163,184,.06)" stroke="rgba(148,163,184,.30)" />
-              <text x="348" y="72" fill="currentColor" font-size="16" font-family="var(--sans)">3‑hour visibility lens</text>
+              <text x="348" y="72" fill="currentColor" font-size="16" font-family="var(--sans)">Weather-window filter</text>
               <text x="348" y="96" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">Hs window → visible?</text>
 
               <rect x="650" y="40" width="260" height="90" rx="16" fill="url(#g2)" stroke="rgba(148,163,184,.35)" />
-              <text x="668" y="72" fill="currentColor" font-size="16" font-family="var(--sans)">O&amp;M blueprint lens</text>
+              <text x="668" y="72" fill="currentColor" font-size="16" font-family="var(--sans)">Task constraints</text>
               <text x="668" y="96" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">task intervals + doping</text>
 
               <rect x="180" y="195" width="300" height="110" rx="16" fill="rgba(148,163,184,.06)" stroke="rgba(148,163,184,.30)" />
-              <text x="198" y="227" fill="currentColor" font-size="16" font-family="var(--sans)">Policy / vector field</text>
+              <text x="198" y="227" fill="currentColor" font-size="16" font-family="var(--sans)">Scheduling heuristic</text>
               <text x="198" y="252" fill="rgba(148,163,184,.95)" font-size="13" font-family="var(--mono)">choose next action</text>
               <text x="198" y="276" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--sans)">FIFO vs opportunistic</text>
 
@@ -760,17 +756,16 @@
               <path d="M480 250 C510 250, 515 250, 540 250" fill="none" stroke="rgba(148,163,184,.7)" stroke-width="3" marker-end="url(#arrow)" />
 
               <path d="M690 305 C690 330, 240 330, 240 305" fill="none" stroke="rgba(148,163,184,.45)" stroke-width="3" marker-end="url(#arrow)" />
-              <text x="420" y="342" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--mono)">state feedback (closed loop)</text>
+              <text x="420" y="342" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--mono)">schedule / crew-time feedback</text>
 
-              <text x="32" y="26" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--sans)">typed wiring diagram (schematic)</text>
+              <text x="32" y="26" fill="rgba(148,163,184,.85)" font-size="12" font-family="var(--sans)">batch data flow (schematic)</text>
             </svg>
           </div>
 
           <details class="lvl2" style="margin-top:10px">
-            <summary>Where “lens composition” shows up</summary>
+            <summary>What can be swapped</summary>
             <div class="mini">
-              If you swap the forecast source (e.g., from a Met Office wave model feed to an in‑house hindcast), that’s literally composing the
-              system with a lens that maps one interface (raw dataset) into another interface (Hs(t) at asset location). Same for adding a new constraint.
+              Synthetic and imported forecasts enter the same declared sampled-data format. Policies and thresholds can be changed while holding imported evidence fixed. These are implemented substitution points; no general lens-composition laws are implemented or claimed here.
             </div>
           </details>
 
@@ -791,8 +786,8 @@
 
           <h3>What this demo expects</h3>
           <p class="mini">
-            For the lens here, the “input arena” is a time series <span class="mono">Hs(t)</span> on an hourly grid.
-            If you have wave NetCDF, you can convert it to JSON/CSV and paste/import.
+            The batch input is a time series <span class="mono">Hs(t)</span> on a regular grid with a declared step length.
+            If you have wave NetCDF, convert a single regular-grid series to the JSON format below. CSV is not accepted.
           </p>
 
           <div class="row">
@@ -807,6 +802,7 @@
             <button class="btn" id="copyPythonBtn" type="button">Copy NetCDF→JSON helper (Python)</button>
           </div>
 
+          <p id="importFeedback" class="mini" role="status">Import replaces active weather only after validation; rejected data leave the prior result unchanged.</p>
           <details style="margin-top:12px">
             <summary>Python helper snippet (xarray) — converts NetCDF to this demo format</summary>
             <div class="code" id="pySnippet"></div>
@@ -815,9 +811,7 @@
           <details class="lvl2" style="margin-top:12px">
             <summary>Why bundle‑over‑orientation matters for real data</summary>
             <div class="mini">
-              In Myers’ setup, inputs live in a bundle <span class="mono">I → O</span>. Here <span class="mono">O</span> can be
-              (asset_id, time) and the fiber <span class="mono">I(o)</span> contains just the forecast values valid at that (asset,time).
-              This avoids pretending “the input is one global thing” when it is really indexed by context.
+              In the prospective running-system interface, inputs live over the exposed scheduling context. A forecast must cover the visit interval at that context. This batch app instead imports one complete series, validates its uniform time grid and reuses it for both policies.
             </div>
           </details>
 
@@ -833,16 +827,14 @@
           <details open>
             <summary>Suggested next step if you want richer schedules</summary>
             <div class="mini">
-              Build a proper “blueprint schema” (tasks, assets, resource pools, constraints) and treat each data feed as a lens into that schema.
-              For example, a CMMS export, vessel availability, and weather nowcasts each become composable components.
+              A richer schema could add assets, resource pools and constraints. A future implementation would need explicit interface maps and tests before claiming that CMMS, vessel and forecast components compose correctly.
             </div>
           </details>
 
           <details class="lvl2" style="margin-top:12px">
-            <summary>From blueprint to state manifold</summary>
+            <summary>Scope of the current model</summary>
             <div class="mini">
-              A project state can be represented as a partially‑filled blueprint (which tasks are completed/in‑progress, remaining cooldowns).
-              Feasible next moves form the “tangent set” at that state; a policy selects one move, i.e. a section (vector field) over the state space.
+              The blueprint is supplied, not derived. This program computes two schedules from it; it does not enumerate the full reachable state space or generate every valid completion policy. An unscheduled task means this heuristic did not allocate it, not a proof that no feasible full schedule exists.
             </div>
           </details>
 
@@ -865,8 +857,10 @@
             <li>This is a toy model for concept validation, not an operational safety tool.</li>
             <li>Weather here is synthetic unless you paste real data.</li>
             <li>Sea‑state constraint is simplified to a single threshold on significant wave height Hs.</li>
-            <li>Tasks are simplified to “needs one 3‑hour visit sometime inside an allowed interval.”</li>
-            <li>Single crew/vessel is assumed via a cooldown after each task.</li>
+            <li>Tasks are simplified to “needs one <span data-window-label>3‑hour</span> visit sometime inside an allowed interval.”</li>
+            <li>One crew is occupied for the whole visit and its following cooldown. These are invented toy rules, not operational Hornsea limits.</li>
+            <li>Each Hs sample is held constant over its following step interval. Every sample interval touched by a visit must be present and below the limit; no between-sample weather inference or safety assurance is made.</li>
+            <li>Completion at the stated latest end is allowed. Starts are restricted to the forecast grid.</li>
           </ul>
 
           <details class="lvl2" style="margin-top:12px">
@@ -880,23 +874,20 @@
         </section>
 
         <section class="panel">
-          <h2>What’s “visibility through a 3‑hour window”?</h2>
+          <h2>What’s “visibility through a <span data-window-label>3‑hour</span> window”?</h2>
           <div class="callout lvl0">
-            Imagine a sliding 3‑hour slot over the forecast. When the sea state stays under your limit for the whole slot, the task is “visible” / feasible.
+            Imagine a sliding <span data-window-label>3‑hour</span> slot over the forecast. When the sea state stays under your limit for the whole slot, the task is “visible” / feasible.
           </div>
 
           <div class="mini lvl1">
             Practically: crew transfer or a delicate lift can require sustained conditions, not just a momentary lull.
-            This lens computes all start times where the next 3 hours meet the limit.
+            The forecast filter computes sampled start times whose whole selected window meets the limit.
           </div>
 
           <details class="lvl2" style="margin-top:12px">
             <summary>Formal output type</summary>
             <div class="mini">
-              For a discrete hourly grid, the output can be represented as a Boolean time series
-              <span class="mono">V : {0…N-1} → {0,1}</span>, where <span class="mono">V(t)=1</span>
-              iff <span class="mono">max(Hs[t…t+2]) ≤ Hs_max</span>.
-              More generally, output is a set of feasible intervals.
+              The derived batch output is a Boolean flag per sampled start. It is true only when the entire selected visit window is covered by consecutive forecast intervals and every touched interval has Hs ≤ the task threshold. This is a function of forecast plus rules, not the state-only readout in the interface sketch.
             </div>
           </details>
 
@@ -1076,26 +1067,34 @@
       return out;
     }
 
-    function computeSafeStarts(wave, windowHours, stepHours, hsMax){
-      const n = wave.length;
-      const wSteps = Math.max(1, Math.round(windowHours/stepHours));
-      const safe = new Array(n).fill(false);
-      for(let i=0;i<n;i++){
-        if(i + wSteps > n) break;
-        let ok = true;
-        for(let j=0;j<wSteps;j++){
-          if(wave[i+j].hs > hsMax){ ok = false; break; }
-        }
-        safe[i] = ok;
+    function validateWave(wave, stepHours){
+      if(!Number.isFinite(stepHours) || stepHours <= 0) throw new Error('Step must be a positive number of hours.');
+      if(!Array.isArray(wave) || wave.length < 2) throw new Error('At least two weather samples are required.');
+      const stepMs = stepHours * HOUR_MS;
+      for(let i=0; i<wave.length; i++){
+        const p=wave[i];
+        if(!p || !Number.isFinite(p.t) || typeof p.hs !== 'number' || !Number.isFinite(p.hs) || p.hs < 0) throw new Error('Weather samples must be finite non-negative numbers; missing values are not calm weather.');
+        if(i && Math.abs((p.t-wave[i-1].t)-stepMs) > .01) throw new Error('Weather timestamps must form the declared regular grid; gaps are not bridged.');
       }
-      return safe;
+    }
+
+    function computeSafeStarts(wave, windowHours, stepHours, hsMax){
+      validateWave(wave, stepHours);
+      if(!Number.isFinite(windowHours) || windowHours<=0 || !Number.isFinite(hsMax) || hsMax<0) throw new Error('Window and threshold must be valid non-negative values, with a positive window.');
+      const n=wave.length, windowMs=windowHours*HOUR_MS, stepMs=stepHours*HOUR_MS;
+      const horizonEnd=wave[n-1].t+stepMs;
+      return wave.map((point,i)=>{
+        const end=point.t+windowMs;
+        if(end>horizonEnd+.01) return false;
+        for(let j=i;j<n && wave[j].t<end-.01;j++) if(wave[j].hs>hsMax) return false;
+        return true;
+      });
     }
 
     function findFirstSafeWithin(wave, safe, startMs, endMs){
       // earliest index i such that wave[i].t>=startMs and wave[i].t<=endMs and safe[i]
       const i0 = lowerBoundByT(wave, startMs);
-      const i1 = lowerBoundByT(wave, endMs);
-      for(let i=i0; i<i1; i++) if(safe[i]) return i;
+      for(let i=i0; i<wave.length && wave[i].t<=endMs; i++) if(safe[i]) return i;
       return -1;
     }
 
@@ -1152,8 +1151,8 @@
       const remaining = new Map();
       for(const t of tasks) remaining.set(t.id, {...t});
 
-      const t0 = Math.min(...tasks.map(t=>t.earliestStartMs));
-      const tMax = Math.max(...tasks.map(t=>t.latestEndMs));
+      const t0 = Math.max(wave[0].t, Math.min(...tasks.map(t=>t.earliestStartMs)));
+      const tMax = Math.min(wave[wave.length-1].t, Math.max(...tasks.map(t=>t.latestEndMs)));
 
       let now = t0;
       const plan = [];
@@ -1165,6 +1164,10 @@
       }
 
       while(remaining.size > 0 && now <= tMax){
+        const nextSample = lowerBoundByT(wave, now);
+        if(nextSample >= wave.length) break;
+        now = wave[nextSample].t;
+        if(now > tMax) break;
         // eligible tasks at time 'now'
         const candidates = [];
         for(const task of remaining.values()){
@@ -1173,7 +1176,7 @@
           if(now > latestStart) continue;
           const idx = lowerBoundByT(wave, now);
           const safe = safeByDoping[String(task.doping)];
-          if(idx >= 0 && idx < safe.length && safe[idx]){
+          if(idx < wave.length && wave[idx].t <= latestStart && safe[idx]){
             candidates.push({...task, idx});
           }
         }
@@ -1281,7 +1284,7 @@
       for(let i=startIdx;i<endIdx;i++){
         if(!safe[i]) continue;
         const x0 = xFor(i);
-        const x1 = xFor(i + Math.round(cfg.windowHours/cfg.stepHours));
+        const x1 = xFor(i + cfg.windowHours/cfg.stepHours);
         ctx.fillRect(x0, padT, Math.max(1,x1-x0), h);
       }
 
@@ -1365,12 +1368,13 @@
       const tStart = wave[0].t;
       pts.push({t: tStart, y});
       for(const p of scheduled){
-        pts.push({t: p.chosenStartMs, y});
+        const completedAt=p.chosenStartMs + cfg.windowHours*HOUR_MS;
+        pts.push({t: completedAt, y});
         y += 1;
-        pts.push({t: p.chosenStartMs + cfg.windowHours*HOUR_MS, y});
+        pts.push({t: completedAt, y});
       }
       // extend to end
-      pts.push({t: wave[wave.length-1].t, y});
+      pts.push({t: wave[wave.length-1].t + cfg.stepHours*HOUR_MS, y});
       return pts;
     }
 
@@ -1382,7 +1386,7 @@
       const h=height-padT-padB;
 
       const t0 = wave[0].t;
-      const t1 = wave[wave.length-1].t;
+      const t1 = Math.max(seriesA.at(-1).t, seriesB.at(-1).t);
       const yMax = Math.max(1, Math.max(seriesA.at(-1)?.y||0, seriesB.at(-1)?.y||0));
 
       function xForT(t){
@@ -1452,19 +1456,35 @@
     };
 
     function getCfg(){
-      return {
-        windowHours: Number(el.windowHrs.value) || 3,
-        stepHours: Number(el.stepHrs.value) || 1,
-        days: Number(el.days.value) || 45,
-        scenario: el.weatherScenario.value,
-        seed: Number(el.seed.value) || 1,
-        policy: el.policy.value,
-        dopingRules: {
-          0: { ...app.dopingRules[0] },
-          1: { ...app.dopingRules[1] },
-          2: { ...app.dopingRules[2] },
-        }
-      };
+      const windowHours=Number(el.windowHrs.value),stepHours=Number(el.stepHrs.value),days=Number(el.days.value),seed=Number(el.seed.value);
+      if(!el.windowHrs.value || !Number.isFinite(windowHours) || windowHours<1 || windowHours>12) throw new Error('Enter a visit window between 1 and 12 hours.');
+      if(!el.stepHrs.value || !Number.isFinite(stepHours) || stepHours<0.25 || stepHours>6) throw new Error('Enter a forecast step between 0.25 and 6 hours.');
+      if(!el.days.value || !Number.isFinite(days) || days<2 || days>90) throw new Error('Enter a forecast horizon between 2 and 90 days.');
+      if(!el.seed.value || !Number.isInteger(seed) || seed<0) throw new Error('Enter a non-negative whole-number seed.');
+      if(!Number.isFinite(fromDatetimeLocalUTC(el.startDate.value))) throw new Error('Enter a valid forecast start date.');
+      for(const inp of el.taskTable.querySelectorAll('input[type="datetime-local"]')){
+        if(!inp.value || !Number.isFinite(fromDatetimeLocalUTC(inp.value))) throw new Error('Complete each task date; the previous result is not current while a date is missing.');
+      }
+      for(const task of normalizeTasks(app.tasks)){
+        if(task.latestEndMs<task.earliestStartMs) throw new Error('A task latest end cannot be before its earliest start.');
+      }
+      for(const inp of el.dopingTable.querySelectorAll('input')){
+        if(!inp.value || !Number.isFinite(Number(inp.value)) || Number(inp.value)<0) throw new Error('Enter non-negative thresholds and cooldowns.');
+      }
+      return {windowHours,stepHours,days,seed,scenario:el.weatherScenario.value,policy:el.policy.value,
+        dopingRules:{0:{...app.dopingRules[0]},1:{...app.dopingRules[1]},2:{...app.dopingRules[2]}}};
+    }
+
+    function showValidation(message){
+      el.validationMessage.textContent=message ? message+' Results are not current; correct the input to recompute.' : '';
+      el.validationMessage.classList.toggle('hidden',!message);
+      el.exportBtn.disabled=!!message || !app.lastRun;
+    }
+
+    function refreshSourceReceipt(cfg){
+      const source=app.externalWave ? 'Imported weather ('+app.externalWave.length+' samples, '+cfg.stepHours+'h step)' : 'Synthetic '+cfg.scenario+' weather (seed '+cfg.seed+')';
+      el.sourceReceipt.textContent=source+'. Both policy curves use this same weather. Edits are temporary in this tab; refresh restores the preset. Export downloads a result file; import accepts weather only, not a saved plan.';
+      document.querySelectorAll('[data-window-label]').forEach(node=>node.textContent=cfg.windowHours+'-hour');
     }
 
     function buildWave(cfg){
@@ -1537,6 +1557,7 @@
 
           if(field === 'earliestStartISO' || field === 'latestEndISO'){
             const ms = fromDatetimeLocalUTC(inp.value);
+            if(!Number.isFinite(ms)){ showValidation('Complete each task date.'); return; }
             task[field] = fmtIso(ms);
           } else if(field === 'doping'){
             task[field] = Number(inp.value);
@@ -1544,7 +1565,7 @@
             task[field] = inp.value;
           }
 
-          if(app.lastRun) rerunAndRedraw();
+          if(app.lastRun) rerunAndRedraw(); else redrawBlank();
         });
       });
 
@@ -1567,14 +1588,10 @@
       const avgDelay = feasible ? (scheduled.reduce((a,p)=>a + (p.delayHours||0), 0) / feasible) : 0;
       el.kpiAvgDelay.textContent = feasible ? avgDelay.toFixed(1) : '–';
 
-      // utilisation: scheduled starts / available starts for medium doping (viz doping)
-      const vizLvl = Number(el.vizDoping.value);
-      const safe = safeByDoping[String(vizLvl)];
-      const t0 = wave[0].t;
-      const t1 = wave[wave.length-1].t;
-      const availableStarts = computeAvailableStartCount(safe, t0, t1, wave);
-      const util = availableStarts ? (scheduled.length / availableStarts) : 0;
-      el.kpiWeatherUtil.textContent = availableStarts ? util.toFixed(3) : '–';
+      // Occupied visit hours / full forecast coverage, independent of the visualised threshold.
+      const horizonHours=(wave[wave.length-1].t-wave[0].t)/HOUR_MS+cfg.stepHours;
+      const occupancy=scheduled.length*cfg.windowHours/horizonHours;
+      el.kpiWeatherUtil.textContent=(occupancy*100).toFixed(1)+'%';
 
       // table
       const tbody = el.outTable;
@@ -1641,6 +1658,7 @@
     }
 
     function run(){
+      try{
       const cfg = getCfg();
       const wave = buildWave(cfg);
       const tasks = normalizeTasks(app.tasks);
@@ -1650,8 +1668,11 @@
         ? simulateOpportunistic(tasks, wave, cfg, safeByDoping)
         : simulateFIFO(tasks, wave, cfg, safeByDoping);
 
-      app.lastRun = { cfg, wave, tasks, safeByDoping, plan };
+      app.lastRun = { cfg, wave, tasks, safeByDoping, plan, source: app.externalWave ? 'imported' : cfg.scenario };
       renderOutput(plan, wave, cfg, safeByDoping);
+      refreshSourceReceipt(cfg);
+      showValidation('');
+      }catch(error){ showValidation(error.message); }
     }
 
     function rerunAndRedraw(){
@@ -1661,12 +1682,17 @@
 
     function resetPreset(){
       app.externalWave = null;
+      el.startDate.value = '2025-06-08T00:00';
+      el.days.value = '45'; el.windowHrs.value = '3'; el.stepHrs.value = '1';
+      el.seed.value = '42'; el.weatherScenario.value = 'moderate'; el.policy.value = 'fifo';
+      el.zoom.value = '18'; el.scrollDay.value = '0'; el.vizDoping.value = '1';
       app.dopingRules = JSON.parse(JSON.stringify(DEFAULT_DOPING_RULES));
       app.tasks = JSON.parse(JSON.stringify(PRESET_TASKS_H2));
       app.lastRun = null;
       renderDopingTable();
       renderTaskTable();
       toast('Reset to preset');
+      showValidation('');
       // clear KPIs
       el.kpiFeasible.textContent = '–';
       el.kpiAvgDelay.textContent = '–';
@@ -1677,17 +1703,18 @@
       const wave = buildWave(cfg);
       const safeByDoping = precomputeSafeByDoping(wave, cfg);
       redrawCharts(wave, cfg, safeByDoping, normalizeTasks(app.tasks));
+      refreshSourceReceipt(cfg);
     }
 
     function exportJSON(){
-      if(!app.lastRun){ toast('Run first'); return; }
+      if(!app.lastRun || !el.validationMessage.classList.contains('hidden')){ toast('Run valid inputs first'); return; }
       const {cfg, wave, plan} = app.lastRun;
       const payload = {
         meta: {
           generatedAt: new Date().toISOString(),
           windowHours: cfg.windowHours,
           stepHours: cfg.stepHours,
-          scenario: app.externalWave ? 'imported' : cfg.scenario,
+          scenario: app.lastRun.source,
           seed: cfg.seed,
           policy: cfg.policy,
           dopingRules: cfg.dopingRules,
@@ -1696,7 +1723,7 @@
           wave: {
             startISO: fmtIso(wave[0].t),
             stepHours: cfg.stepHours,
-            hs: wave.map(p=>Number(p.hs.toFixed(3))),
+            hs: wave.map(p=>p.hs),
           }
         },
         output: {
@@ -1730,6 +1757,7 @@
     function addTask(){
       const id = 'task_' + Math.random().toString(16).slice(2,10);
       const startMs = fromDatetimeLocalUTC(el.startDate.value) + 24*HOUR_MS;
+      if(!Number.isFinite(startMs)){ showValidation('Enter a forecast start date before adding a task.'); return; }
       const task = {
         id,
         name: 'New task',
@@ -1741,6 +1769,7 @@
       app.tasks.push(task);
       renderTaskTable();
       toast('Task added');
+      if(app.lastRun) rerunAndRedraw();
     }
 
     function loadPreset(){
@@ -1750,33 +1779,30 @@
       if(app.lastRun) rerunAndRedraw();
     }
 
+    function parseWavePayload(obj){
+      if(!obj || typeof obj!=='object' || !Array.isArray(obj.hs)) throw new Error('Expected {startISO, stepHours, hs:[...]}.');
+      if(Object.keys(obj).some(k=>!['startISO','stepHours','hs'].includes(k))) throw new Error('Use only startISO, stepHours and hs. Separate or irregular timestamp arrays are not accepted.');
+      if(typeof obj.startISO!=='string' || !/T.*(?:Z|[+-]\d{2}:\d{2})$/.test(obj.startISO)) throw new Error('startISO must name an explicit time zone, for example 2025-06-08T00:00:00Z.');
+      const startMs=Date.parse(obj.startISO),stepHours=obj.stepHours;
+      if(!Number.isFinite(startMs) || typeof stepHours!=='number' || !Number.isFinite(stepHours) || stepHours<0.25 || stepHours>6) throw new Error('Use a valid startISO and numeric stepHours between 0.25 and 6.');
+      if(obj.hs.length<10 || obj.hs.length>100000) throw new Error('Supply 10 to 100,000 weather samples.');
+      if(obj.hs.some(v=>typeof v!=='number' || !Number.isFinite(v) || v<0)) throw new Error('Every Hs value must be a finite non-negative number. Missing, null and text samples are rejected.');
+      const wave=obj.hs.map((hs,i)=>({t:startMs+i*stepHours*HOUR_MS,hs}));
+      validateWave(wave,stepHours);
+      if(wave.length*stepHours>90*24) throw new Error('Imported coverage must not exceed 90 days.');
+      return {wave,stepHours,startMs};
+    }
+
     function importFromPaste(){
-      let obj;
-      try{ obj = JSON.parse(el.importBox.value); }
-      catch(e){ toast('Invalid JSON'); return; }
-
-      if(!obj || typeof obj !== 'object' || !Array.isArray(obj.hs)){
-        toast('Expected {startISO, stepHours, hs:[...] }');
-        return;
-      }
-      const startMs = Date.parse(obj.startISO);
-      const stepHours = Number(obj.stepHours) || 1;
-      if(!Number.isFinite(startMs) || !Number.isFinite(stepHours) || stepHours<=0){
-        toast('Bad startISO/stepHours');
-        return;
-      }
-
-      const wave = obj.hs.map((v,i)=>({t: startMs + i*stepHours*HOUR_MS, hs: Number(v)})).filter(p=>Number.isFinite(p.hs));
-      if(wave.length < 10){ toast('Need more data points'); return; }
-
-      app.externalWave = wave;
-      // sync UI
-      el.stepHrs.value = String(stepHours);
-      el.startDate.value = toDatetimeLocalUTC(startMs);
-      el.days.value = String(Math.max(2, Math.round((wave.length*stepHours)/24)));
-
+      let parsed;
+      try{ parsed=parseWavePayload(JSON.parse(el.importBox.value)); }
+      catch(error){ toast('Import rejected: '+error.message); el.importFeedback.textContent='Import rejected: '+error.message+' The active weather and result are unchanged.'; return; }
+      app.externalWave=parsed.wave;
+      el.stepHrs.value=String(parsed.stepHours);
+      el.startDate.value=toDatetimeLocalUTC(parsed.startMs);
+      el.days.value=String(Math.max(2,Math.ceil(parsed.wave.length*parsed.stepHours/24)));
+      el.importFeedback.textContent='Imported '+parsed.wave.length+' samples. Policy, visit-window and constraint changes keep this weather. Changing a forecast-source control switches back to synthetic weather.';
       toast('Imported wave series');
-      app.lastRun = null;
       run();
     }
 
@@ -1819,7 +1845,7 @@
         'waveCanvas','progressCanvas','vizDoping','zoom','scrollDay',
         'addTaskBtn','loadPresetBtn','resetBtn','tabDash','tabLens','tabData','tabAbout',
         'panelDash','panelLens','panelData','panelAbout','importBox','importBtn','copyTemplateBtn','copyPythonBtn',
-        'exportSchema','pySnippet','lvl0','lvl1','lvl2'
+        'exportSchema','pySnippet','lvl0','lvl1','lvl2','validationMessage','sourceReceipt','importFeedback'
       ].forEach(id=>{ el[id] = document.getElementById(id); });
 
       // default start date aligned to preset (UTC)
@@ -1831,6 +1857,7 @@
         '# Convert Met Office / other wave NetCDF → the JSON format this demo accepts',
         'import xarray as xr',
         'import numpy as np',
+        'import json',
         '',
         "ds = xr.open_dataset('your_wave_file.nc')",
         "# Inspect variables: print(ds)  # look for significant wave height (often 'VHM0' or similar)",
@@ -1841,7 +1868,11 @@
         '',
         "# Choose a point (nearest grid cell) — replace with your lat/lon",
         "lat, lon = 53.907425, 1.468515",
-        "pt = ds[var].sel(latitude=lat, longitude=lon, method='nearest') if {'latitude','longitude'}.issubset(pt.dims) else ds[var]",
+        "pt = ds[var]",
+        "if {'latitude','longitude'}.issubset(pt.dims):",
+        "    pt = pt.sel(latitude=lat, longitude=lon, method='nearest')",
+        "pt = pt.squeeze(drop=True)",
+        "if pt.dims != ('time',): raise ValueError('Select one point and remove non-time dimensions first')",
         '',
         "# Ensure time is decoded",
         "t = pt['time'].values",
@@ -1849,9 +1880,14 @@
         '',
         "# Build payload",
         "startISO = np.datetime_as_string(t[0], unit='s') + 'Z'",
-        "stepHours = 1  # adjust if your time grid differs",
+        "if len(t) < 10: raise ValueError('Need at least 10 samples')",
+        "steps = np.diff(t) / np.timedelta64(1, 'h')",
+        "if not np.allclose(steps, steps[0]) or steps[0] <= 0: raise ValueError('Time grid must be regular and increasing')",
+        "if not np.all(np.isfinite(hs)) or np.any(hs < 0): raise ValueError('Missing or negative Hs values are not allowed')",
+        "stepHours = float(steps[0])",
+        "if not 0.25 <= stepHours <= 6: raise ValueError('This demo accepts time steps between 0.25 and 6 hours')",
         "payload = {'startISO': startISO, 'stepHours': stepHours, 'hs': [float(x) for x in hs]}",
-        "print(payload)"
+        "print(json.dumps(payload, allow_nan=False))"
       ].join('\n');
 
       // export schema example
@@ -1881,13 +1917,17 @@
       el.zoom.addEventListener('change', ()=>{ if(app.lastRun) rerunAndRedraw(); else redrawBlank(); });
       el.scrollDay.addEventListener('change', ()=>{ if(app.lastRun) rerunAndRedraw(); else redrawBlank(); });
 
-      // live changes
-      [el.weatherScenario, el.seed, el.startDate, el.days, el.windowHrs, el.stepHrs, el.policy].forEach(inp=>{
-        inp.addEventListener('change', ()=>{
-          app.externalWave = null; // switching primary inputs invalidates import
+      // Only forecast-source controls replace an imported series; policy/window changes preserve it.
+      [el.weatherScenario,el.seed,el.startDate,el.days,el.stepHrs].forEach(inp=>{
+        inp.addEventListener('change',()=>{
+          if(app.externalWave) toast('Switched to synthetic weather; pasted data are retained in the import box.');
+          app.externalWave=null;
           if(app.lastRun) rerunAndRedraw(); else redrawBlank();
         });
       });
+      [el.windowHrs,el.policy].forEach(inp=>inp.addEventListener('change',()=>{
+        if(app.lastRun) rerunAndRedraw(); else redrawBlank();
+      }));
 
       // tabs
       el.tabDash.addEventListener('click', ()=>showTab('dash'));
@@ -1906,7 +1946,7 @@
         const tmpl = {
           startISO: '2025-06-08T00:00:00Z',
           stepHours: 1,
-          hs: [1.1, 1.0, 0.9, 1.2]
+          hs: [1.1, 1.0, 0.9, 1.2, 1.0, 0.8, 0.7, 0.9, 1.1, 1.0, 0.8, 0.7]
         };
         copyToClipboard(JSON.stringify(tmpl, null, 2));
       });
@@ -1917,12 +1957,16 @@
     }
 
     function redrawBlank(){
+      try{
       const cfg = getCfg();
       const wave = buildWave(cfg);
       const safeByDoping = precomputeSafeByDoping(wave, cfg);
       const tasks = normalizeTasks(app.tasks);
       // no chosen starts yet
       redrawCharts(wave, cfg, safeByDoping, tasks);
+      refreshSourceReceipt(cfg);
+      showValidation('');
+      }catch(error){ showValidation(error.message); }
     }
 
     window.addEventListener('resize', ()=>{
