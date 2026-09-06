@@ -35,6 +35,7 @@ jobs:
           node tests/constructive-state-oracle.cjs apps/constructive-state/core.js
           node tests/constructive-state-laws.cjs
           node tests/constructive-state-scene.cjs
+          node tests/continuous-state.cjs
           node tests/backbone-model.cjs
           node tests/offshore-model.cjs
           node tests/spatial-orders.cjs

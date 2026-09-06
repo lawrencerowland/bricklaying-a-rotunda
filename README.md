@@ -28,6 +28,8 @@ The default finite toy produces 3,883 reachable states, 3,508 sufficient classes
 
 The second tab, [Picture the site](https://lawrencerowland.github.io/bricklaying-a-rotunda/apps/constructive-state/#site), preserves the animated imagined Manorwater hilltop, two cylindrical brick towers and model-linked hoists. [Artwork provenance](apps/constructive-state/ARTWORK.md).
 
+The [Continuous dynamics tab](https://lawrencerowland.github.io/bricklaying-a-rotunda/apps/constructive-state/#continuous) starts with the original state-space, tangent-space, bundle and section intuition. An exact smooth cylinder-state toy shows a vector field and its integral curve together. Feedback supplies the chosen rates. Steady work reaches the end; smooth tapering makes positive progress but never reaches it at finite time. This is a separate simplified model, not a proved continuous limit of the brick construction.
+
 ## Verification
 
 No build or external runtime dependency is required by the apps. Model checks use Node; browser checks need Playwright, installed Chrome and a served repository root.
@@ -36,6 +38,8 @@ No build or external runtime dependency is required by the apps. Model checks us
 node tests/constructive-state-oracle.cjs apps/constructive-state/core.js
 node tests/constructive-state-laws.cjs
 node tests/constructive-state-scene.cjs
+node tests/continuous-state.cjs
+node tests/continuous-browser.cjs http://127.0.0.1:8767/
 node tests/backbone-model.cjs
 node tests/offshore-model.cjs
 node tests/spatial-orders.cjs
@@ -49,7 +53,7 @@ node tests/offshore-browser.cjs http://127.0.0.1:8767/apps/offshore_wind_mainten
 
 ## Plan-layer handshake
 
-`FORAY-DYNAMIC-PROJECT-STATES · R-012 · 6 September 2026`
+`FORAY-DYNAMIC-PROJECT-STATES · R-013 · 6 September 2026`
 
 The collection is curated around dynamics and Myers-style lenses. The principal construction retains resource composition, refinement and completing policies. A policy selects an action; iteration generates a trajectory. An abstraction established after composition may fail when resource wiring changes. The finite toy advances the stated end under supplied assumptions; it does not close the whole foray.
 

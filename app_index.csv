@@ -5,4 +5,4 @@ index,name,description,tags,link
 9,Wiring Diagrams ↔ Lenses Explainer,Inspect how interface wiring becomes forward and backward reindexing maps in Myers's lens convention.,wiring|lens|interface,apps/wiring_lens_explainer.html
 11,Offshore Wind Maintenance Lens,Compare weather-constrained scheduling policies with whole visit windows and inclusive deadlines.,weather|scheduling|dynamics,apps/offshore_wind_maintenance_lens_copy.html
 12,Dynamic Project States — Brick Cylinder (Toy Model),A simple primer separating direction choices from deterministic or random policies and their resulting trajectories.,choices|policy|trajectory,apps/Possible-trajectories1.html
-13,Can a blueprint carry the dynamics?,Compose local work and resource updates; derive sufficient state and generated full-completion paths; test changed wiring.,construction|state|lens|trajectory|foray120,apps/constructive-state/
+13,Can a blueprint carry the dynamics?,Construct finite completion paths and sufficient state; explore continuous manifolds and sections in a separate smooth toy.,construction|state|lens|trajectory|continuous|foray120,apps/constructive-state/

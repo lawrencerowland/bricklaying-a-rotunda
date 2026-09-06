@@ -7,7 +7,7 @@ function stop() { if (timer) cancelAnimationFrame(timer); timer = null; $('play'
 function readSettings() { const result = {}; for (const [k, v] of new FormData(form)) result[k] = k === 'blockedB' ? v === 'true' : Number(v); return C.config(result); }
 function fillSettings(c) { for (const [k, v] of Object.entries(c)) if (form.elements.namedItem(k)) form.elements.namedItem(k).value = String(v); }
 function writeURL(c) { const url = new URL(location.href); for (const [k, v] of Object.entries(c)) url.searchParams.set(k, String(v)); history.replaceState(null, '', url); }
-function showPanel(name) { stop(); for (const el of document.querySelectorAll('.panel')) el.hidden = el.id !== 'panel-' + name; for (const b of document.querySelectorAll('[data-panel]')) { if (b.dataset.panel === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); } document.body.classList.toggle('site-mode',name==='site'); const url=new URL(location.href); url.hash=name==='build'?'':name; history.replaceState(null,'',url); if(name==='site') enterSite(); }
+function showPanel(name) { stop(); for (const el of document.querySelectorAll('.panel')) el.hidden = el.id !== 'panel-' + name; for (const b of document.querySelectorAll('[data-panel]')) { if (b.dataset.panel === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); } document.body.classList.toggle('site-mode',name==='site'); const url=new URL(location.href); url.hash=name==='build'?'':name; history.replaceState(null,'',url); if(name==='site') enterSite(); document.dispatchEvent(new CustomEvent('experiment-panel',{detail:name})); }
 document.querySelectorAll('[data-panel]').forEach(b => b.addEventListener('click', () => showPanel(b.dataset.panel)));
 function drawSite() {
   if(!model||!trace.length)return;
@@ -117,5 +117,5 @@ let cfg = { ...C.defaults }, invalid = false;
 const params = new URL(location.href).searchParams;
 for (const name of Object.keys(cfg)) if (params.has(name)) { const value = params.get(name); if (name === 'blockedB') { if (!['true','false'].includes(value)) invalid = true; cfg[name] = value === 'true'; } else cfg[name] = Number(value); }
 try { if (invalid) throw Error('Invalid URL flag'); C.config(cfg); } catch (_) { cfg = { ...C.defaults }; invalid = true; }
-const requestedPanel=location.hash.slice(1);if(['site','state','verdict','formal'].includes(requestedPanel))showPanel(requestedPanel);
+const requestedPanel=location.hash.slice(1);if(['site','continuous','state','verdict','formal'].includes(requestedPanel))showPanel(requestedPanel);
 fillSettings(cfg); construct(cfg, invalid);
