@@ -1,13 +1,48 @@
 'use strict';
 const C = window.ProjectDynamics, $ = id => document.getElementById(id), fmt = n => Number.isFinite(n) ? n.toLocaleString('en-GB') : 'No route';
-let model, trace = [], at = 0, timer = null, selectedMode = 'blueprint', revision = 0;
+let model, trace = [], at = 0, timer = null, selectedMode = 'blueprint', revision = 0, motionPhase = 0, siteSeen = false, sitePaused = false;
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const form = $('settings');
-function stop() { if (timer) clearInterval(timer); timer = null; $('play').textContent = 'Play path'; }
+function stop() { if (timer) cancelAnimationFrame(timer); timer = null; $('play').textContent = 'Play path'; $('site-play').textContent = 'Play scene'; }
 function readSettings() { const result = {}; for (const [k, v] of new FormData(form)) result[k] = k === 'blockedB' ? v === 'true' : Number(v); return C.config(result); }
 function fillSettings(c) { for (const [k, v] of Object.entries(c)) if (form.elements.namedItem(k)) form.elements.namedItem(k).value = String(v); }
 function writeURL(c) { const url = new URL(location.href); for (const [k, v] of Object.entries(c)) url.searchParams.set(k, String(v)); history.replaceState(null, '', url); }
-function showPanel(name) { for (const el of document.querySelectorAll('.panel')) el.hidden = el.id !== 'panel-' + name; for (const b of document.querySelectorAll('[data-panel]')) { if (b.dataset.panel === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); } }
+function showPanel(name) { stop(); for (const el of document.querySelectorAll('.panel')) el.hidden = el.id !== 'panel-' + name; for (const b of document.querySelectorAll('[data-panel]')) { if (b.dataset.panel === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); } document.body.classList.toggle('site-mode',name==='site'); const url=new URL(location.href); url.hash=name==='build'?'':name; history.replaceState(null,'',url); if(name==='site') enterSite(); }
 document.querySelectorAll('[data-panel]').forEach(b => b.addEventListener('click', () => showPanel(b.dataset.panel)));
+function drawSite() {
+  if(!model||!trace.length)return;
+  const s=model.g.states[trace[at].state],c=model.g.c,view=window.ProjectSiteScene.frame(s,c,{nextAction:trace[at+1]?.action,phase:motionPhase});
+  $('site-art').innerHTML=view.markup;
+  $('site-title').textContent='A hilltop. Two towers. '+(c.capacity===1?'One shared hoist.':'Two available hoists.');
+  $('site-a').textContent='A · '+view.status[0].text; $('site-b').textContent='B · '+view.status[1].text;
+  $('site-hoists').textContent=view.lifting+' / '+c.capacity+' hoist'+(c.capacity===1?'':'s')+' lifting';
+  $('site-position').max=trace.length-1;$('site-position').value=at;
+  $('site-caption').textContent='Generated replay · tick '+at+' of '+(trace.length-1)+' · '+view.placed+' of '+(2*c.bricks*c.courses)+' model sectors placed'+(model.g.goals[trace[at].state]?' · complete and cured.':!Number.isFinite(model.solution.distance[model.p.of[trace[at].state]])?' · no completion route.':motionPhase>0?' · moving towards the next tick.':'.');
+  $('site-play').disabled=trace.length<2;
+}
+function playPath(loop=false) {
+  stop();if(!model||trace.length<2)return;
+  if(at===trace.length-1&&!loop){at=0;motionPhase=0;drawPath();}
+  const duration=loop?850:700;let started=performance.now()-motionPhase*duration,lastPaint=0,held=null;
+  $('play').textContent='Pause';$('site-play').textContent='Pause scene';
+  function step(now){
+    if(at===trace.length-1){
+      motionPhase=0;if(!loop){stop();drawSite();return;}
+      if(held===null)held=now;
+      if(now-held>=1900){at=0;held=null;started=now;drawPath(true);}
+    }else if(now-started>=duration){at++;motionPhase=0;started=now;drawPath(true);}
+    else{motionPhase=Math.max(0,Math.min(1,(now-started)/duration));if(!$('panel-site').hidden&&now-lastPaint>45){drawSite();lastPaint=now;}}
+    timer=requestAnimationFrame(step);
+  }
+  timer=requestAnimationFrame(step);
+}
+function enterSite(){
+  if(!model)return;
+  if(!siteSeen){siteSeen=true;if(at===0&&trace.length>2)at=Math.floor((trace.length-1)*.62);motionPhase=0;drawPath();}
+  drawSite();if(!reducedMotion.matches&&!sitePaused)playPath(true);
+}
+reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches){stop();motionPhase=0;drawSite();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
 function ringHTML(s) {
   const c = model.g.c;
   return s.fronts.map((f, i) => '<article class="ring"><h3>Ring ' + (i ? 'B' : 'A') + '</h3>' + f.masks.map((mask, course) => ({ mask, course })).reverse().map(({ mask, course }) => '<div class="course"><div class="meta"><span>Course ' + (course + 1) + '</span><span>' + (f.cool[course] > 0 ? 'Curing: ' + f.cool[course] + ' ticks' : mask === C.full(c) ? 'Ready' : 'Incomplete') + '</span></div><div class="bricks" style="grid-template-columns:repeat(' + c.bricks + ',1fr)">' + Array.from({ length: c.bricks }, (_, b) => {
@@ -16,7 +51,7 @@ function ringHTML(s) {
   }).join('') + '</div></div>').join('') + '<p class="reservation">' + (f.job ? 'Hoist reserved · ' + f.job.remaining + ' placement tick remaining' : 'No hoist reserved') + '</p></article>').join('');
 }
 function drawPath(keepPlaying = false) {
-  if (!keepPlaying) stop(); $('position').max = Math.max(0, trace.length - 1); $('position').value = at;
+  if (!keepPlaying) {stop();motionPhase=0;} $('position').max = Math.max(0, trace.length - 1); $('position').value = at;
   const index = trace[at].state, { g, p, solution } = model, s = g.states[index], d = solution.distance[p.of[index]];
   $('rings').innerHTML = ringHTML(s);
   $('state-caption').textContent = 'State ' + index + ' · sufficient class ' + p.of[index] + ' · ' + C.pop(s.owners) + '/' + g.c.capacity + ' hoists reserved. Courses are unwrapped; positions wrap around each ring.';
@@ -27,6 +62,7 @@ function drawPath(keepPlaying = false) {
   $('back').disabled = at === 0; $('next').disabled = at === trace.length - 1; $('play').disabled = trace.length < 2;
   $('manual').innerHTML = g.edges[index].map((e, i) => '<option value="' + i + '">' + C.actionName(e.action) + '</option>').join('');
   $('take').disabled = g.edges[index].length === 0;
+  drawSite();
 }
 function witnessCard(i, title, action) {
   const { g, p, solution } = model, s = g.states[i], enabled = g.edges[i].some(e => e.action === action);
@@ -54,7 +90,7 @@ function drawAll() {
   const { g, p, solution, verification } = model;
   $('stat-reachable').textContent = fmt(g.states.length); $('stat-classes').textContent = fmt(p.groups.length); $('stat-time').textContent = fmt(solution.distance[p.of[0]]); $('stat-paths').textContent = solution.counts[p.of[0]].toLocaleString('en-GB');
   $('certificate').innerHTML = '<h3>Certificate for these settings</h3><p class="note">' + fmt(g.states.length) + ' reachable states · ' + fmt(verification.transitions) + ' transitions · ' + fmt(p.groups.length) + ' stable classes · ' + fmt(verification.policyLifts) + ' concrete policy lifts checked. ' + fmt(verification.unreachable) + ' classes cannot reach the goal. Exhaustive finite-model checks, not real-world physics evidence.</p>';
-  trace = C.trajectory(g, p, solution, 0, $('preference').value); at = 0; drawPath(); drawRefinement(); drawGlue();
+  trace = C.trajectory(g, p, solution, 0, $('preference').value); at = 0; drawPath(); drawRefinement(); drawGlue(); if(!$('panel-site').hidden)enterSite();
 }
 function construct(c, urlWarning = false) {
   stop(); const run = ++revision; for (const el of form.elements) el.disabled = true; $('status').textContent = 'Constructing, wiring, refining and solving…'; form.setAttribute('aria-busy', 'true');
@@ -71,7 +107,11 @@ $('reset').addEventListener('click', () => { selectedMode = 'blueprint'; $('summ
 $('refine').addEventListener('click', () => { if (!model) return; stop(); selectedMode = $('summary').value; model.p = C.refine(model.g, selectedMode); model.solution = C.solve(model.g, model.p); model.verification = C.verifyQuotient(model.g, model.p, model.solution); drawAll(); $('status').textContent = 'Summary tested and refined; physical assumptions unchanged.'; });
 $('generate').addEventListener('click', () => { if (!model) return; trace = C.trajectory(model.g, model.p, model.solution, 0, $('preference').value); at = 0; drawPath(); });
 $('next').addEventListener('click', () => { if (at < trace.length - 1) at++; drawPath(); }); $('back').addEventListener('click', () => { if (at > 0) at--; drawPath(); }); $('start').addEventListener('click', () => { at = 0; drawPath(); }); $('position').addEventListener('input', () => { at = Number($('position').value); drawPath(); });
-$('play').addEventListener('click', () => { if (timer) return stop(); if (at === trace.length - 1) at = 0; drawPath(); timer = setInterval(() => { if (at < trace.length - 1) at++; drawPath(true); if (at === trace.length - 1) stop(); }, 700); $('play').textContent = 'Pause'; });
+$('play').addEventListener('click', () => { if (timer) return stop(); playPath(false); });
+$('site-play').addEventListener('click',()=>{if(timer){sitePaused=true;stop();}else{sitePaused=false;playPath(true);}});
+$('site-restart').addEventListener('click',()=>{at=0;motionPhase=0;sitePaused=false;drawPath();if(!reducedMotion.matches)playPath(true);});
+$('site-position').addEventListener('input',()=>{sitePaused=true;at=Number($('site-position').value);drawPath();});
+$('site-details').addEventListener('click',()=>showPanel('build'));
 $('take').addEventListener('click', () => { const index = trace[at].state, edge = model.g.edges[index][Number($('manual').value)]; if (!edge) return; const head = trace.slice(0, at + 1); const tail = C.trajectory(model.g, model.p, model.solution, edge.to, $('preference').value); tail[0].action = edge.action; trace = head.concat(tail); at = head.length; drawPath(); });
 $('local-claim').addEventListener('change', checkGlue); $('pool-claim').addEventListener('change', checkGlue);
 $('context-test').addEventListener('click', () => {
@@ -89,4 +129,5 @@ let cfg = { ...C.defaults }, invalid = false;
 const params = new URL(location.href).searchParams;
 for (const name of Object.keys(cfg)) if (params.has(name)) { const value = params.get(name); if (name === 'blockedB') { if (!['true','false'].includes(value)) invalid = true; cfg[name] = value === 'true'; } else cfg[name] = Number(value); }
 try { if (invalid) throw Error('Invalid URL flag'); C.config(cfg); } catch (_) { cfg = { ...C.defaults }; invalid = true; }
+const requestedPanel=location.hash.slice(1);if(['site','state','glue','verdict','formal'].includes(requestedPanel))showPanel(requestedPanel);
 fillSettings(cfg); construct(cfg, invalid);

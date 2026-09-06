@@ -12,9 +12,16 @@ The important distinctions are compatibility versus reachability; summary versus
 
 [Method, proofs, sources and tests](apps/constructive-state/METHOD.md)
 
+### Picture the site
+
+The second tab is a [looping hilltop construction scene](https://lawrencerowland.github.io/bricklaying-a-rotunda/apps/constructive-state/#site): two cylindrical brick towers, curing courses and a shared hoist (or two when capacity is changed). Pause, replay or scrub the scene, then inspect that same moment in the analytical view. Reduced-motion preferences are respected. This is a live projection of the existing generated route, not an independent animation with different construction rules.
+
+The imagined Manorwater/Borders setting supplies a visual motivator, not historical or engineering evidence. [Artwork provenance and exact generation prompt](apps/constructive-state/ARTWORK.md) distinguish the generated landscape from the model-driven construction overlay. This visual increment is `FORAY-DYNAMIC-PROJECT-STATES · R-011`; it improves scenario recognition without changing the mathematical result or retiring any earlier view.
+
 ```sh
 node tests/constructive-state-oracle.cjs apps/constructive-state/core.js
 node tests/constructive-state-laws.cjs
+node tests/constructive-state-scene.cjs
 ```
 
 The browser check needs Playwright, installed Chrome and a served repository root. No build or external runtime dependency is required by the app itself.
