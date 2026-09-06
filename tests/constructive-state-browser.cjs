@@ -1,0 +1,58 @@
+'use strict';
+// Requires Playwright and an installed Chrome. Tests use only the ordinary UI.
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const path = require('node:path'), os = require('node:os');
+(async()=>{
+ const base=process.argv[2]||'http://127.0.0.1:8767/';
+ const browser=await chromium.launch({channel:'chrome',headless:true});
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+ page.setDefaultTimeout(10000);
+ page.on('pageerror',e=>errors.push(e.message));
+ const ready=()=>page.waitForFunction(()=>document.getElementById('status')?.textContent.includes('Model constructed.'));
+ const text=id=>page.locator('#'+id).innerText();
+ try{
+  await page.goto(base);await page.getByRole('link',{name:'Open the constructive state experiment',exact:true}).click();await ready();
+  assert.equal(await text('stat-time'),'34');assert.equal(await text('stat-reachable'),'3,883');
+  assert.equal(await text('stat-paths'),'38,797,312');
+  await page.screenshot({path:path.join(os.tmpdir(),'120-ui-desktop.png'),fullPage:true});
+  await page.getByRole('button',{name:'Next tick →',exact:true}).click();assert.match(await text('state-caption'),/1\/1 hoists/);
+  await page.getByRole('button',{name:'34',exact:true}).click();assert.match(await text('action-caption'),/End delivered/);assert(await page.locator('#take').isDisabled());
+  await page.getByRole('button',{name:'From start',exact:true}).click();
+  await page.getByText('Try another legal next move',{exact:true}).click();
+  await page.getByLabel('Available now').selectOption({label:'Advance one tick'});
+  await page.getByRole('button',{name:'Take move, then replan',exact:true}).click();assert.match(await text('path-summary'),/35 ticks/);
+  await page.getByLabel('Among equally fast choices').selectOption('B');await page.getByRole('button',{name:'Generate completion path',exact:true}).click();assert.match(await text('action-caption'),/Next: Start B/);
+  console.log('PASS: route, completion, detour and regenerated B-first path');
+  await page.getByRole('button',{name:'What state is enough?',exact:true}).click();assert.match(await text('refinement'),/729/);
+  await page.getByLabel('Starting summary').selectOption('ready');await page.getByRole('button',{name:'Test and refine',exact:true}).click();assert.match(await text('refinement'),/Starting summary fails/);
+  await page.getByRole('button',{name:'Test a one-hoist abstraction with two hoists',exact:true}).click();assert.match(await text('context-result'),/fails under the new wiring/);
+  console.log('PASS: refinement and changed-wiring witness');
+  await page.screenshot({path:path.join(os.tmpdir(),'120-ui-state.png'),fullPage:true});
+  await page.getByRole('button',{name:'Glue & reachability',exact:true}).click();assert.match(await text('join-results'),/212 compatible tuples/);
+  await page.getByLabel('Pool reports for A').selectOption('0');assert.match(await text('glue-result'),/No glued assignment/);
+  await page.getByLabel('Workfront A reports').selectOption('0');assert.match(await text('glue-result'),/Unique glued assignment/);
+  await page.getByRole('button',{name:'End · way · result',exact:true}).click();assert(await page.locator('#panel-verdict').isVisible());
+  await page.getByRole('button',{name:'Formal construction',exact:true}).click();assert(await page.locator('.wiring').isVisible());
+  const method=await page.getByRole('link',{name:'method note',exact:true}).getAttribute('href');assert.equal((await page.request.get(new URL(method,page.url()).href)).status(),200);
+  await page.getByLabel('Access to ring B').selectOption('true');assert.match(await text('status'),/not applied/);assert.equal(await text('stat-time'),'34');
+  await page.getByRole('button',{name:'Construct model',exact:true}).click();await ready();assert.equal(await text('stat-time'),'No route');assert.equal(await text('stat-paths'),'0');
+  const saved=page.url();await page.reload();await ready();assert.equal(await text('stat-time'),'No route');assert.equal(page.url(),saved);
+  await page.getByRole('button',{name:'Reset',exact:true}).click();await ready();assert.equal(await text('stat-time'),'34');
+  await page.getByLabel('Hoists available').selectOption('2');await page.getByRole('button',{name:'Construct model',exact:true}).click();await ready();assert.equal(await text('stat-time'),'22');
+  await page.reload();await ready();assert.equal(await page.getByLabel('Hoists available').inputValue(),'2');assert.equal(await text('stat-time'),'22');
+  await page.goto(new URL('apps/constructive-state/?bricks=99&blockedB=nonsense',base).href);
+  await page.waitForFunction(()=>document.getElementById('status')?.textContent.includes('Invalid URL assumptions'));
+  assert.equal(await text('stat-time'),'34');assert(page.url().includes('bricks=99'));assert.match(await text('receipt'),/URL was not overwritten/);
+  await page.getByRole('button',{name:'Reset',exact:true}).click();await ready();assert(!page.url().includes('bricks=99'));
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:path.join(os.tmpdir(),'120-ui-mobile.png'),fullPage:true});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'page overflows mobile viewport');
+  await page.getByRole('button',{name:'What state is enough?',exact:true}).click();
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'state view overflows');
+  await page.getByRole('button',{name:'Build & paths',exact:true}).click();await page.getByRole('button',{name:'Next tick →',exact:true}).focus();await page.keyboard.press('Enter');assert.match(await text('state-caption'),/1\/1 hoists/);
+  await page.getByRole('link',{name:'← All dynamic-state essays',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('#app-grid .card').length===13);
+  assert.equal(await page.locator('#app-grid .card').count(),13);assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({result:'PASS',base,checks:'index enter; default completion; wait/replan; B tie-break; refinement; changed wiring; gluing contradiction/correction; formal links; unapplied edits; impossible completion; URL reopen/correct/reload; invalid URL recovery; mobile width; keyboard; return and all13 essays',pageErrors:errors}));
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

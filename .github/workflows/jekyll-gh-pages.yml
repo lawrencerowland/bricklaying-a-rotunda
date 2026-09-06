@@ -28,6 +28,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Verify constructive state experiment
+        run: |
+          node tests/constructive-state-oracle.cjs apps/constructive-state/core.js
+          node tests/constructive-state-laws.cjs
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Build with Jekyll
